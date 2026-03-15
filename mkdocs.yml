@@ -1,0 +1,60 @@
+site_name: llm-gateway-bench
+site_description: Benchmark LLM API gateways — latency, TTFT, throughput.
+repo_url: https://github.com/YOUR_USERNAME/llm-gateway-bench
+repo_name: llm-gateway-bench
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - content.action.edit
+    - content.action.view
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - Installation: installation.md
+      - Quickstart: quickstart.md
+  - Guides:
+      - Configuration: configuration.md
+      - Providers: providers.md
+      - Advanced usage: advanced.md
+  - Reference:
+      - FAQ: faq.md
+      - Contributing: contributing.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.details
+
+plugins:
+  - search
+  - git-revision-date-localized:
+      enable_creation_date: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/YOUR_USERNAME/llm-gateway-bench
+
+copyright: |
+  Copyright &copy; 2026
