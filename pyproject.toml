@@ -51,11 +51,11 @@ dev = [
 lgb = "llm_gateway_bench.cli:app"
 
 [project.urls]
-Homepage = "https://github.com/YOUR_USERNAME/llm-gateway-bench"
-Docs = "https://YOUR_USERNAME.github.io/llm-gateway-bench/"
-Changelog = "https://github.com/YOUR_USERNAME/llm-gateway-bench/releases"
-Repository = "https://github.com/YOUR_USERNAME/llm-gateway-bench"
-Issues = "https://github.com/YOUR_USERNAME/llm-gateway-bench/issues"
+Homepage = "https://github.com/mnbplus/llm-gateway-bench"
+Docs = "https://mnbplus.github.io/llm-gateway-bench/"
+Changelog = "https://github.com/mnbplus/llm-gateway-bench/releases"
+Repository = "https://github.com/mnbplus/llm-gateway-bench"
+Issues = "https://github.com/mnbplus/llm-gateway-bench/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/llm_gateway_bench"]
@@ -69,8 +69,8 @@ line-length = 88
 target-version = "py39"
 
 [tool.ruff.lint]
-select = ["E", "W", "F", "I", "N", "UP", "B", "SIM", "PIE"]
-ignore = ["B008"]
+select = ["E", "W", "F", "I"]
+ignore = ["E501"]
 
 [tool.ruff.lint.isort]
 combine-as-imports = true
