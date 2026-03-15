@@ -1,10 +1,14 @@
 # llm-gateway-bench 🚀
 
+[English](README.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja.md)
+
 > A CLI benchmarking tool for LLM API gateways — measure latency, TTFT, and throughput across providers.
 
+[![CI](https://github.com/mnbplus/llm-gateway-bench/actions/workflows/ci.yml/badge.svg)](https://github.com/mnbplus/llm-gateway-bench/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/)
-[![PyPI version](https://badge.fury.io/py/llm-gateway-bench.svg)](https://pypi.org/project/llm-gateway-bench/)
+[![PyPI version](https://img.shields.io/pypi/v/llm-gateway-bench)](https://pypi.org/project/llm-gateway-bench/)
+[![Coverage](https://img.shields.io/codecov/c/github/mnbplus/llm-gateway-bench)](https://codecov.io/gh/mnbplus/llm-gateway-bench)
 
 ## Why?
 
@@ -26,13 +30,13 @@ Choosing an LLM API provider is hard. Pricing pages don't tell you about real-wo
 pip install llm-gateway-bench
 
 # Run a quick benchmark
-lgb run --provider openai --model gpt-4o-mini --requests 20
+lgb run --provider openai --model gpt-5-mini --requests 20
 
 # Compare multiple providers
-lgb compare --config bench.yaml
+lgb compare bench.yaml
 
-# Generate a report
-lgb report --output results.md
+# List supported providers
+lgb providers
 ```
 
 ## Installation
@@ -42,7 +46,7 @@ lgb report --output results.md
 pip install llm-gateway-bench
 
 # From source
-git clone https://github.com/YOUR_USERNAME/llm-gateway-bench
+git clone https://github.com/mnbplus/llm-gateway-bench
 cd llm-gateway-bench
 pip install -e .
 ```
@@ -54,7 +58,7 @@ pip install -e .
 ```bash
 lgb run \
   --provider openai \
-  --model gpt-4o-mini \
+  --model gpt-5-mini \
   --requests 50 \
   --concurrency 5 \
   --prompt "Explain quantum computing in one sentence."
@@ -70,22 +74,27 @@ prompts:
 
 providers:
   - name: openai
-    model: gpt-4o-mini
+    model: gpt-5-mini
     api_key: ${OPENAI_API_KEY}
 
   - name: anthropic
-    model: claude-3-haiku-20240307
+    model: claude-haiku-4
     api_key: ${ANTHROPIC_API_KEY}
 
   - name: deepseek
-    model: deepseek-chat
+    model: deepseek-v3
     base_url: https://api.deepseek.com/v1
     api_key: ${DEEPSEEK_API_KEY}
 
   - name: siliconflow
-    model: deepseek-ai/DeepSeek-V3
+    model: Pro/deepseek-ai/DeepSeek-V3
     base_url: https://api.siliconflow.cn/v1
     api_key: ${SILICONFLOW_API_KEY}
+
+  - name: dashscope
+    model: qwen3-max
+    base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    api_key: ${DASHSCOPE_API_KEY}
 
 settings:
   requests: 30
@@ -94,33 +103,34 @@ settings:
 ```
 
 ```bash
-lgb compare --config bench.yaml --output report.md
+lgb compare bench.yaml --output report.md
 ```
 
 ### Sample Output
 
 ```
-┌─────────────────┬──────────────────────┬──────────┬────────────┬──────────────┐
-│ Provider        │ Model                │ TTFT (ms)│ Total (ms) │ Tokens/sec   │
-├─────────────────┼──────────────────────┼──────────┼────────────┼──────────────┤
-│ openai          │ gpt-4o-mini          │  312     │  1840      │  68.2        │
-│ anthropic       │ claude-3-haiku       │  428     │  2100      │  54.1        │
-│ deepseek        │ deepseek-chat        │  890     │  3200      │  42.3        │
-│ siliconflow     │ DeepSeek-V3          │  654     │  2800      │  48.7        │
-└─────────────────┴──────────────────────┴──────────┴────────────┴──────────────┘
+┌─────────────────┬──────────────────┬──────────┬────────────┬──────────────┐
+│ Provider        │ Model            │ TTFT (ms)│ Total (ms) │ Tokens/sec   │
+├─────────────────┼──────────────────┼──────────┼────────────┼──────────────┤
+│ openai          │ gpt-5-mini       │  198     │  1240      │  94.5        │
+│ anthropic       │ claude-haiku-4   │  312     │  1680      │  76.2        │
+│ deepseek        │ deepseek-v3      │  720     │  2800      │  48.3        │
+│ siliconflow     │ DeepSeek-V3      │  580     │  2400      │  55.1        │
+│ dashscope       │ qwen3-max        │  440     │  2100      │  62.7        │
+└─────────────────┴──────────────────┴──────────┴────────────┴──────────────┘
 ```
 
 ## Supported Providers
 
-| Provider | Status | Notes |
-|----------|--------|-------|
-| OpenAI | ✅ | GPT-4o, GPT-4o-mini, o1, etc. |
-| Anthropic | ✅ | Claude 3.x series |
-| Google Gemini | ✅ | Gemini 1.5 Pro/Flash |
-| DeepSeek | ✅ | Via OpenAI-compatible API |
-| Qwen (Alibaba) | ✅ | Via DashScope |
-| SiliconFlow | ✅ | Multiple open-source models |
-| Any OpenAI-compat | ✅ | Custom base_url support |
+| Provider | Status | Latest Models | Notes |
+|----------|--------|---------------|-------|
+| OpenAI | ✅ | gpt-5.4, gpt-5-mini, o3, o4-mini | Requires `OPENAI_API_KEY` |
+| Anthropic | ✅ | claude-opus-4, claude-sonnet-4-5, claude-haiku-4 | Requires `ANTHROPIC_API_KEY` |
+| Google Gemini | ✅ | gemini-2.5-pro, gemini-2.5-flash | Requires `GEMINI_API_KEY` |
+| DeepSeek | ✅ | deepseek-v3, deepseek-r2 | Via OpenAI-compatible API |
+| Qwen (Alibaba) | ✅ | qwen3-max, qwen3-plus, qwen3-turbo | Via DashScope |
+| SiliconFlow | ✅ | DeepSeek-V3, Qwen3, and more | Requires `SILICONFLOW_API_KEY` |
+| Any OpenAI-compat | ✅ | Any model | Use `--base-url` |
 
 ## Configuration
 
@@ -130,6 +140,9 @@ Set API keys via environment variables or `.env` file:
 export OPENAI_API_KEY=sk-...
 export ANTHROPIC_API_KEY=sk-ant-...
 export DEEPSEEK_API_KEY=sk-...
+export SILICONFLOW_API_KEY=sk-...
+export DASHSCOPE_API_KEY=sk-...
+export GEMINI_API_KEY=...
 ```
 
 ## Contributing
@@ -142,14 +155,4 @@ MIT — see [LICENSE](LICENSE)
 
 ---
 
-## Project links
-
-- Documentation: `docs/` (start here: `docs/configuration.md`)
-- Providers: `docs/providers.md`
-- Changelog: `CHANGELOG.md`
-
-## Badges
-
-[![CI](https://github.com/YOUR_USERNAME/llm-gateway-bench/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/llm-gateway-bench/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/pypi/v/llm-gateway-bench)](https://pypi.org/project/llm-gateway-bench/)
-[![Coverage](https://img.shields.io/codecov/c/github/YOUR_USERNAME/llm-gateway-bench)](https://codecov.io/gh/YOUR_USERNAME/llm-gateway-bench)
+**Links:** [Docs](docs/) · [Changelog](CHANGELOG.md) · [Issues](https://github.com/mnbplus/llm-gateway-bench/issues)
