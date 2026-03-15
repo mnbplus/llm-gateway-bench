@@ -229,7 +229,7 @@ def render_results(console: Console, results: List[BenchResult]) -> None:
 
 
 def compare_table(
-    left: BenchResult, right: BenchResult, *, left_name: str, right_name: str
+    left: Optional[BenchResult], right: Optional[BenchResult], *, left_name: str, right_name: str
 ) -> Table:
     """A small comparison table for two runs of the same provider/model."""
 
@@ -238,6 +238,10 @@ def compare_table(
     t.add_column(left_name, justify="right")
     t.add_column(right_name, justify="right")
     t.add_column("Δ", justify="right")
+
+    if left is None or right is None:
+        t.add_row("—", "missing data", "missing data", "—")
+        return t
 
     def row(metric: str, a: float, b: float, *, lower_is_better: bool) -> None:
         delta = b - a
