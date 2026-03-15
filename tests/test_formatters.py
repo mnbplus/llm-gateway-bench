@@ -1,14 +1,15 @@
 """Tests for llm_gateway_bench.formatters."""
 
+from rich.text import Text
+
 from llm_gateway_bench.formatters import (
-    results_table,
-    latency_histogram_table,
-    compare_table,
     _best_worst,
     _style_extrema,
+    compare_table,
+    latency_histogram_table,
+    results_table,
 )
 from llm_gateway_bench.models import BenchResult
-from rich.text import Text
 
 
 def make_result(

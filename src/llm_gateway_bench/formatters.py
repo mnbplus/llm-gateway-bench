@@ -1,25 +1,18 @@
-"""Rich formatting helpers for llm-gateway-bench.
-
-This module focuses on *presentation*:
-- Progress bars for request execution
-- ASCII latency distribution charts (horizontal bars)
-- Highlighting best/worst values in comparison tables
-"""
-
+"""Output formatters for benchmark results."""
 from __future__ import annotations
 
-from contextlib import contextmanager
-from dataclasses import dataclass
-from typing import Iterator, List, Sequence, Tuple
+import csv
+import io
+import json
+from typing import Any, List, Optional, Sequence, Tuple
 
+from rich import box
 from rich.console import Console
-from rich.panel import Panel
 from rich.progress import (
     BarColumn,
+    MofNCompleteColumn,
     Progress,
     SpinnerColumn,
-    TaskID,
-    TaskProgressColumn,
     TextColumn,
     TimeElapsedColumn,
     TimeRemainingColumn,
@@ -27,48 +20,38 @@ from rich.progress import (
 from rich.table import Table
 from rich.text import Text
 
-from .models import BenchResult
+console = Console()
 
+
+# ---------------------------------------------------------------------------
+# Progress bar
+# ---------------------------------------------------------------------------
 
 def make_progress() -> Progress:
-    """Create a nice default progress bar."""
-
+    """Return a Rich Progress bar configured for benchmark runs."""
     return Progress(
         SpinnerColumn(),
-        TextColumn("[bold]{task.description}[/bold]"),
+        TextColumn("[bold cyan]{task.description}[/bold cyan]"),
         BarColumn(bar_width=None),
-        TaskProgressColumn(),
+        MofNCompleteColumn(),
         TimeElapsedColumn(),
         TimeRemainingColumn(),
-        transient=True,
+        console=console,
+        transient=False,
     )
 
 
-@dataclass(frozen=True)
-class ProgressHandle:
-    progress: Progress
-    task_id: TaskID
+# ---------------------------------------------------------------------------
+# Best / worst highlighting helpers
+# ---------------------------------------------------------------------------
 
-    def advance(self, step: int = 1) -> None:
-        self.progress.advance(self.task_id, step)
-
-
-@contextmanager
-def request_progress(description: str, total: int) -> Iterator[ProgressHandle]:
-    """Context manager that renders a Rich progress bar for ``total`` steps."""
-
-    progress = make_progress()
-    with progress:
-        task_id = progress.add_task(description, total=total)
-        yield ProgressHandle(progress=progress, task_id=task_id)
-
-
-def _best_worst(values: Sequence[float], higher_is_better: bool) -> Tuple[float, float]:
+def _best_worst(
+    values: Sequence[float], *, higher_is_better: bool
+) -> Tuple[float, float]:
+    """Return (best, worst) from values."""
     if not values:
         return (0.0, 0.0)
-    if higher_is_better:
-        return (max(values), min(values))
-    return (min(values), max(values))
+    return (max(values), min(values)) if higher_is_better else (min(values), max(values))
 
 
 def _style_extrema(
@@ -79,8 +62,16 @@ def _style_extrema(
     *,
     better_when_higher: bool,
 ) -> Text:
-    """Colorize best (green) and worst (red) values."""
+    """Colorize best (green) and worst (red) values.
 
+    Parameters
+    ----------
+    value:           formatted string to display
+    raw_value:       numeric value used for comparison
+    best:            the best value in the set
+    worst:           the worst value in the set
+    better_when_higher: True if higher raw values are better
+    """
     if raw_value == best and raw_value == worst:
         return Text(value)
 
@@ -99,9 +90,71 @@ def _style_extrema(
     return Text(value)
 
 
-def results_table(results: List[BenchResult]) -> Table:
-    """Render results as a Rich table with best/worst highlighting."""
+# Alias used internally
+_highlight = _style_extrema
 
+
+# ---------------------------------------------------------------------------
+# ASCII horizontal histogram
+# ---------------------------------------------------------------------------
+
+def _histogram_bins(
+    latencies: Sequence[float], bins: int
+) -> List[Tuple[float, float, int]]:
+    """Bucket latencies into bins equal-width buckets."""
+    if not latencies:
+        return []
+    lo, hi = min(latencies), max(latencies)
+    if hi == lo:
+        return [(lo, hi, len(latencies))]
+    step = (hi - lo) / bins
+    counts = [0] * bins
+    for v in latencies:
+        idx = min(int((v - lo) / step), bins - 1)
+        counts[idx] += 1
+    return [(lo + i * step, lo + (i + 1) * step, c) for i, c in enumerate(counts)]
+
+
+def latency_histogram_table(
+    latencies_ms: Sequence[float], *, bins: int = 10, width: int = 36
+) -> Table:
+    """Return a Rich Table with a horizontal ASCII bar chart for latency distribution."""
+    t = Table(title="Latency Distribution", show_header=True, header_style="bold")
+    t.add_column("Bucket (ms)", style="dim")
+    t.add_column("Count", justify="right")
+    t.add_column("Bar")
+
+    data = _histogram_bins(list(latencies_ms), bins=bins)
+    if not data:
+        t.add_row("\u2014", "0", "")
+        return t
+
+    max_count = max(c for _, _, c in data) or 1
+
+    for start, end, c in data:
+        frac = c / max_count
+        bar_len = max(0, int(frac * width))
+        bar = "\u2588" * bar_len
+
+        if frac >= 0.66:
+            style = "bold red"
+        elif frac >= 0.33:
+            style = "yellow"
+        else:
+            style = "green"
+
+        label = f"{start:,.0f}\u2013{end:,.0f}"
+        t.add_row(label, str(c), Text(bar, style=style))
+
+    return t
+
+
+# ---------------------------------------------------------------------------
+# Full results table (used by tests and render_results)
+# ---------------------------------------------------------------------------
+
+def results_table(results: List[Any]) -> Table:
+    """Render results as a Rich table with best/worst highlighting."""
     table = Table(title="Benchmark Results")
     table.add_column("Provider", style="cyan")
     table.add_column("Model", style="white")
@@ -127,126 +180,52 @@ def results_table(results: List[BenchResult]) -> Table:
         table.add_row(
             r.provider,
             r.model,
-            _style_extrema(f"{r.ttft_ms:.0f}", r.ttft_ms, ttft_best, ttft_worst, better_when_higher=False),
             _style_extrema(
-                f"{r.total_ms:.0f}", r.total_ms, total_best, total_worst, better_when_higher=False
+                f"{r.ttft_ms:.0f}", r.ttft_ms,
+                ttft_best, ttft_worst, better_when_higher=False,
             ),
             _style_extrema(
-                f"{r.tokens_per_sec:.1f}",
-                r.tokens_per_sec,
-                tps_best,
-                tps_worst,
-                better_when_higher=True,
+                f"{r.total_ms:.0f}", r.total_ms,
+                total_best, total_worst, better_when_higher=False,
             ),
             _style_extrema(
-                f"{r.success_rate:.0%}",
-                r.success_rate,
-                succ_best,
-                succ_worst,
-                better_when_higher=True,
+                f"{r.tokens_per_sec:.1f}", r.tokens_per_sec,
+                tps_best, tps_worst, better_when_higher=True,
             ),
-            _style_extrema(f"{r.p95_ms:.0f}", r.p95_ms, p95_best, p95_worst, better_when_higher=False),
+            _style_extrema(
+                f"{r.success_rate:.0%}", r.success_rate,
+                succ_best, succ_worst, better_when_higher=True,
+            ),
+            _style_extrema(
+                f"{r.p95_ms:.0f}", r.p95_ms,
+                p95_best, p95_worst, better_when_higher=False,
+            ),
         )
 
     return table
 
 
-def _histogram_bins(latencies: Sequence[float], bins: int) -> List[Tuple[float, float, int]]:
-    if not latencies:
-        return []
-    lo = min(latencies)
-    hi = max(latencies)
-    if hi == lo:
-        return [(lo, hi, len(latencies))]
-
-    step = (hi - lo) / bins
-    edges = [lo + i * step for i in range(bins)] + [hi]
-
-    counts = [0 for _ in range(bins)]
-    for v in latencies:
-        # put max into the last bin
-        idx = min(int((v - lo) / step), bins - 1)
-        counts[idx] += 1
-
-    out: List[Tuple[float, float, int]] = []
-    for i, c in enumerate(counts):
-        start = edges[i]
-        end = edges[i + 1]
-        out.append((start, end, c))
-    return out
-
-
-def latency_histogram_table(
-    latencies_ms: Sequence[float], *, bins: int = 10, width: int = 36
-) -> Table:
-    """ASCII horizontal bar chart for latency distribution."""
-
-    t = Table(title="Latency Distribution", show_header=True, header_style="bold")
-    t.add_column("Bucket (ms)", style="dim")
-    t.add_column("Count", justify="right")
-    t.add_column("Bar")
-
-    data = _histogram_bins(list(latencies_ms), bins=bins)
-    if not data:
-        t.add_row("—", "0", "")
-        return t
-
-    max_count = max(c for _, _, c in data) or 1
-
-    for start, end, c in data:
-        frac = c / max_count
-        bar_len = max(0, int(frac * width))
-        bar = "█" * bar_len
-
-        # simple color ramp
-        if frac >= 0.66:
-            style = "bold red"
-        elif frac >= 0.33:
-            style = "yellow"
-        else:
-            style = "green"
-
-        label = f"{start:,.0f}–{end:,.0f}"
-        t.add_row(label, str(c), Text(bar, style=style))
-
-    return t
-
-
-def render_results(console: Console, results: List[BenchResult]) -> None:
-    console.print(results_table(results))
-
-    # Show latency distributions when raw latencies are available
-    for r in results:
-        if not r.raw_latencies:
-            continue
-        console.print(
-            Panel(
-                latency_histogram_table(r.raw_latencies),
-                title=f"{r.provider}/{r.model}",
-                border_style="cyan",
-            )
-        )
-
-
 def compare_table(
-    left: Optional[BenchResult], right: Optional[BenchResult], *, left_name: str, right_name: str
+    left: Optional[Any],
+    right: Optional[Any],
+    *,
+    left_name: str,
+    right_name: str,
 ) -> Table:
     """A small comparison table for two runs of the same provider/model."""
-
     t = Table(title=f"Compare: {left_name} vs {right_name}")
     t.add_column("Metric", style="cyan")
     t.add_column(left_name, justify="right")
     t.add_column(right_name, justify="right")
-    t.add_column("Δ", justify="right")
+    t.add_column("\u0394", justify="right")
 
     if left is None or right is None:
-        t.add_row("—", "missing data", "missing data", "—")
+        t.add_row("\u2014", "missing data", "missing data", "\u2014")
         return t
 
     def row(metric: str, a: float, b: float, *, lower_is_better: bool) -> None:
         delta = b - a
         if lower_is_better:
-            # improvement when delta < 0
             style = "green" if delta < 0 else ("red" if delta > 0 else "dim")
         else:
             style = "green" if delta > 0 else ("red" if delta < 0 else "dim")
@@ -264,3 +243,162 @@ def compare_table(
     row("Success rate", left.success_rate * 100, right.success_rate * 100, lower_is_better=False)
 
     return t
+
+
+def render_results(con: Console, results: List[Any]) -> None:
+    """Print results table + per-provider latency histograms."""
+    con.print(results_table(results))
+    for r in results:
+        raw: List[float] = []
+        if hasattr(r, "raw_latencies") and r.raw_latencies:
+            raw = list(r.raw_latencies)
+        elif hasattr(r, "latencies") and r.latencies:
+            raw = list(r.latencies)
+        if raw:
+            con.print(latency_histogram_table(raw))
+
+
+# ---------------------------------------------------------------------------
+# ResultFormatter class (used by cli.py)
+# ---------------------------------------------------------------------------
+
+class ResultFormatter:
+    """Render benchmark results in multiple formats."""
+
+    def print_table(self, results: List[Any]) -> None:
+        """Print a Rich table with best/worst latency highlighted."""
+        if not results:
+            console.print("[yellow]No results to display.[/yellow]")
+            return
+
+        avg_lats = [r.avg_latency for r in results]
+        p50s = [r.p50_latency for r in results]
+        p95s = [r.p95_latency for r in results]
+        tpss = [r.avg_tokens_per_second for r in results]
+        succs = [r.success_rate for r in results]
+
+        avg_best, avg_worst = _best_worst(avg_lats, higher_is_better=False)
+        p50_best, p50_worst = _best_worst(p50s, higher_is_better=False)
+        p95_best, p95_worst = _best_worst(p95s, higher_is_better=False)
+        tps_best, tps_worst = _best_worst(tpss, higher_is_better=True)
+        succ_best, succ_worst = _best_worst(succs, higher_is_better=True)
+
+        table = Table(
+            title="[bold]Benchmark Results[/bold]",
+            box=box.ROUNDED,
+            show_header=True,
+            header_style="bold cyan",
+            border_style="bright_black",
+        )
+        table.add_column("Provider", style="bold", min_width=12)
+        table.add_column("Model", style="dim")
+        table.add_column("Avg Latency", justify="right")
+        table.add_column("P50", justify="right")
+        table.add_column("P95", justify="right")
+        table.add_column("Tokens/s", justify="right")
+        table.add_column("Success", justify="right")
+        table.add_column("Errors", justify="right")
+
+        for r in results:
+            table.add_row(
+                r.provider,
+                r.model,
+                _style_extrema(
+                    f"{r.avg_latency:.2f}s", r.avg_latency,
+                    avg_best, avg_worst, better_when_higher=False,
+                ),
+                _style_extrema(
+                    f"{r.p50_latency:.2f}s", r.p50_latency,
+                    p50_best, p50_worst, better_when_higher=False,
+                ),
+                _style_extrema(
+                    f"{r.p95_latency:.2f}s", r.p95_latency,
+                    p95_best, p95_worst, better_when_higher=False,
+                ),
+                _style_extrema(
+                    f"{r.avg_tokens_per_second:.1f}", r.avg_tokens_per_second,
+                    tps_best, tps_worst, better_when_higher=True,
+                ),
+                _style_extrema(
+                    f"{r.success_rate:.0%}", r.success_rate,
+                    succ_best, succ_worst, better_when_higher=True,
+                ),
+                str(r.error_count),
+            )
+
+        console.print(table)
+
+    def print_latency_histogram(
+        self, results: List[Any], *, bins: int = 8, bar_width: int = 40
+    ) -> None:
+        """Print a horizontal ASCII bar chart of latency distribution per provider."""
+        for r in results:
+            raw: List[float] = []
+            if hasattr(r, "raw_latencies") and r.raw_latencies:
+                raw = list(r.raw_latencies)
+            elif hasattr(r, "latencies") and r.latencies:
+                raw = list(r.latencies)
+
+            if not raw:
+                continue
+
+            data = _histogram_bins(raw, bins)
+            max_count = max(c for _, _, c in data) or 1
+
+            table = Table(
+                title=f"Latency Distribution \u2014 {r.provider}",
+                box=box.SIMPLE,
+                show_header=True,
+                header_style="dim",
+                border_style="bright_black",
+                show_edge=False,
+            )
+            table.add_column("Bucket (s)", style="dim", min_width=16, no_wrap=True)
+            table.add_column("n", justify="right", width=5)
+            table.add_column("Bar", min_width=bar_width)
+
+            for lo, hi, count in data:
+                frac = count / max_count
+                filled = max(1 if count else 0, int(frac * bar_width))
+                bar_str = "\u2588" * filled
+
+                if frac >= 0.75:
+                    bar_style = "bold red"
+                elif frac >= 0.4:
+                    bar_style = "yellow"
+                else:
+                    bar_style = "green"
+
+                table.add_row(
+                    f"{lo:.3f}\u2013{hi:.3f}",
+                    str(count),
+                    Text(bar_str, style=bar_style),
+                )
+
+            console.print(table)
+
+    def print_json(self, results: List[Any]) -> None:
+        """Print results as formatted JSON."""
+        data = [r.model_dump() if hasattr(r, "model_dump") else r for r in results]
+        console.print_json(json.dumps(data, default=str))
+
+    def print_csv(self, results: List[Any]) -> None:
+        """Print results as CSV to stdout."""
+        buf = io.StringIO()
+        writer = csv.writer(buf)
+        writer.writerow([
+            "provider", "model", "avg_latency", "p50", "p95",
+            "tokens_per_second", "success_rate", "errors",
+        ])
+        for r in results:
+            writer.writerow([
+                r.provider,
+                r.model,
+                r.avg_latency,
+                r.p50_latency,
+                r.p95_latency,
+                r.avg_tokens_per_second,
+                r.success_rate,
+                r.error_count,
+            ])
+        print(buf.getvalue(), end="")

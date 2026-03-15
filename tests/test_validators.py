@@ -1,13 +1,13 @@
 """Tests for llm_gateway_bench.validators."""
 
-import os
 import pytest
+
+from llm_gateway_bench.exceptions import ProviderError
 from llm_gateway_bench.validators import (
-    validate_provider_name,
     validate_api_key,
     validate_base_url,
+    validate_provider_name,
 )
-from llm_gateway_bench.exceptions import ProviderError
 
 
 def test_validate_provider_name_known():

@@ -1,15 +1,11 @@
 """Tests for llm_gateway_bench.history."""
 
 import json
-import os
-import tempfile
-from pathlib import Path
 
 import pytest
 
 from llm_gateway_bench.history import (
     append_run,
-    ensure_history_parent,
     get_run,
     history_path,
     iter_runs,
@@ -22,8 +18,17 @@ from llm_gateway_bench.models import BenchResult
 @pytest.fixture()
 def temp_history_dir(tmp_path, monkeypatch):
     """Use a temporary directory for history during tests."""
+    # Path.home() uses USERPROFILE on Windows and HOME on Unix
     monkeypatch.setenv("HOME", str(tmp_path))
-    return tmp_path / ".lgb"
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    # Also patch the module-level functions to use tmp_path directly
+    monkeypatch.setattr(
+        "llm_gateway_bench.history.history_dir",
+        lambda: tmp_path / ".lgb",
+    )
+    lgb_dir = tmp_path / ".lgb"
+    lgb_dir.mkdir(parents=True, exist_ok=True)
+    return lgb_dir
 
 
 def make_result(provider: str = "openai", model: str = "gpt-4o-mini") -> BenchResult:
@@ -92,7 +97,7 @@ def test_get_run_not_found(temp_history_dir):
 
 def test_history_file_format(temp_history_dir):
     r = make_result()
-    rid = append_run([r])
+    _rid = append_run([r])  # noqa: F841
 
     p = history_path()
     assert p.exists()
