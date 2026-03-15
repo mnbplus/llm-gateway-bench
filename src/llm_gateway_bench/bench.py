@@ -23,6 +23,7 @@ from dotenv import load_dotenv
 from openai import AsyncOpenAI
 
 from .models import BenchResult
+from .validators import validate_api_key, validate_base_url, validate_provider_name
 
 load_dotenv()
 
@@ -112,15 +113,29 @@ async def _run_concurrent(
     n_requests: int,
     concurrency: int,
     timeout: int,
+    on_progress: Optional[callable] = None,
 ) -> List[_RequestResult]:
-    """Run ``n_requests`` requests with bounded concurrency."""
+    """Run ``n_requests`` requests with bounded concurrency.
+
+    If ``on_progress`` is provided, it will be called once per request completion.
+    """
+
     semaphore = asyncio.Semaphore(concurrency)
 
     async def bounded_request() -> _RequestResult:
         async with semaphore:
             return await _single_request_openai(client, model, prompt, timeout)
 
-    tasks = [bounded_request() for _ in range(n_requests)]
+    async def wrapped() -> _RequestResult:
+        res = await bounded_request()
+        if on_progress is not None:
+            try:
+                on_progress()
+            except Exception:
+                pass
+        return res
+
+    tasks = [wrapped() for _ in range(n_requests)]
     return await asyncio.gather(*tasks)
 
 
@@ -132,6 +147,7 @@ def run_benchmark(
     concurrency: int = 3,
     base_url: Optional[str] = None,
     timeout: int = 30,
+    on_progress: Optional[callable] = None,
 ) -> BenchResult:
     """Run a benchmark for a single provider/model.
 
@@ -143,18 +159,26 @@ def run_benchmark(
         concurrency: Maximum concurrent requests.
         base_url: Optional base URL for OpenAI-compatible endpoints.
         timeout: Per-request timeout in seconds.
+        on_progress: Optional callback invoked once per completed request.
 
     Returns:
         A :class:`~llm_gateway_bench.models.BenchResult` with summary statistics.
     """
+
+    provider = validate_provider_name(provider)
+
     defaults = PROVIDER_DEFAULTS.get(provider, {})
-    effective_base_url = base_url or defaults.get("base_url", "https://api.openai.com/v1")
+    effective_base_url = validate_base_url(base_url or defaults.get("base_url", "https://api.openai.com/v1"))
+
     env_key = defaults.get("env_key", "OPENAI_API_KEY")
-    api_key = os.getenv(env_key, "dummy")
+    # user may rely on env var
+    api_key = validate_api_key(provider, os.getenv(env_key, None))
 
     client = AsyncOpenAI(base_url=effective_base_url, api_key=api_key)
 
-    raw = asyncio.run(_run_concurrent(client, model, prompt, n_requests, concurrency, timeout))
+    raw = asyncio.run(
+        _run_concurrent(client, model, prompt, n_requests, concurrency, timeout, on_progress=on_progress)
+    )
 
     successes = [r for r in raw if r["error"] is None]
     errors = len(raw) - len(successes)
@@ -187,8 +211,12 @@ def run_benchmark(
     )
 
 
-def compare_providers(cfg: dict) -> List[BenchResult]:
-    """Run benchmarks for all providers defined in the config."""
+def compare_providers(cfg: dict, *, on_progress: Optional[callable] = None) -> List[BenchResult]:
+    """Run benchmarks for all providers defined in the config.
+
+    If ``on_progress`` is given, it will be called once per request completion across all providers.
+    """
+
     results: List[BenchResult] = []
     prompts = cfg.get("prompts", ["Say hello."])
     prompt = prompts[0] if prompts else "Say hello."
@@ -204,6 +232,7 @@ def compare_providers(cfg: dict) -> List[BenchResult]:
                 concurrency=settings.get("concurrency", 3),
                 base_url=provider_cfg.get("base_url"),
                 timeout=settings.get("timeout", 30),
+                on_progress=on_progress,
             )
         )
 

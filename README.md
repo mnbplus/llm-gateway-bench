@@ -30,6 +30,10 @@
 
 ---
 
+<p align="center">
+  <img src="docs/images/screenshot.jpg" alt="llm-gateway-bench demo" width="720" />
+</p>
+
 ## Why?
 
 Choosing an LLM API provider is hard. Pricing pages don't tell you about real-world latency, first-token delay, or how performance degrades under load. `llm-gateway-bench` gives you **objective, reproducible benchmark data** so you can make informed decisions.
