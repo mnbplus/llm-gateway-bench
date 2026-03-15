@@ -1,0 +1,31 @@
+# Example bench.yaml for llm-gateway-bench
+# Run: lgb compare example-bench.yaml --output report.md
+
+prompts:
+  - "Write a haiku about the ocean."
+  - "What is the capital of France? Reply in one word."
+
+providers:
+  - name: openai
+    model: gpt-4o-mini
+    api_key: ${OPENAI_API_KEY}
+
+  - name: deepseek
+    model: deepseek-chat
+    base_url: https://api.deepseek.com/v1
+    api_key: ${DEEPSEEK_API_KEY}
+
+  - name: siliconflow
+    model: Pro/deepseek-ai/DeepSeek-V3
+    base_url: https://api.siliconflow.cn/v1
+    api_key: ${SILICONFLOW_API_KEY}
+
+  - name: dashscope
+    model: qwen-plus
+    base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    api_key: ${DASHSCOPE_API_KEY}
+
+settings:
+  requests: 20
+  concurrency: 3
+  timeout: 30
