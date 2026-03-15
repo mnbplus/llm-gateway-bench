@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+  <rect width="1200" height="675" fill="#0f172a"/>
+  <rect x="60" y="60" width="1080" height="555" rx="24" fill="#111827" stroke="#334155" stroke-width="4"/>
+  <text x="120" y="200" fill="#e2e8f0" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto" font-size="56" font-weight="700">Screenshot placeholder</text>
+  <text x="120" y="290" fill="#94a3b8" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto" font-size="30">Replace with a real report screenshot.</text>
+  <text x="120" y="360" fill="#94a3b8" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto" font-size="26">File: docs/assets/quickstart-report.svg</text>
+</svg>

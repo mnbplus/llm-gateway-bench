@@ -1,12 +1,12 @@
 # FAQ
 
-## 1) What does TTFT mean?
+## What does TTFT mean?
 
 TTFT = **Time To First Token**. It measures how long it takes from request start until the model streams the first token.
 
 ---
 
-## 2) What is measured exactly?
+## What is measured exactly?
 
 For each request, the runner measures:
 
@@ -16,7 +16,7 @@ For each request, the runner measures:
 
 ---
 
-## 3) Why do I see high variance between runs?
+## Why do I see high variance between runs?
 
 Common causes:
 
@@ -29,7 +29,7 @@ Try increasing `requests`, running from a stable network, and comparing **median
 
 ---
 
-## 4) My provider works in curl but fails here. Why?
+## My provider works in curl but fails here. Why?
 
 This tool currently uses the **OpenAI Python SDK** and calls:
 
@@ -40,7 +40,7 @@ Some “OpenAI-compatible” endpoints do not fully match the streaming protocol
 
 ---
 
-## 5) Where do API keys come from?
+## Where do API keys come from?
 
 From environment variables (and `.env`). The mapping is defined in code.
 
@@ -48,7 +48,7 @@ See [Providers](providers.md).
 
 ---
 
-## 6) Why is `api_key` in YAML not used?
+## Why is `api_key` in YAML not used?
 
 `bench.yaml` supports `api_key: ${ENV_NAME}` and the loader expands it, but **the current benchmark runner still reads keys from environment variables** based on the provider name.
 
@@ -56,7 +56,7 @@ This is intentional for simplicity today, but may be improved. If you need YAML-
 
 ---
 
-## 7) How do I benchmark a self-hosted vLLM/Ollama/LM Studio?
+## How do I benchmark a self-hosted vLLM/Ollama/LM Studio?
 
 Use `--base-url` (or YAML `base_url`) pointing to your OpenAI-compatible endpoint:
 
@@ -68,7 +68,7 @@ Some local servers accept any `api_key` (or require a dummy value).
 
 ---
 
-## 8) I get timeouts. What should I do?
+## I get timeouts. What should I do?
 
 - Increase `--timeout` (or `settings.timeout`)
 - Reduce `--concurrency`
@@ -77,7 +77,7 @@ Some local servers accept any `api_key` (or require a dummy value).
 
 ---
 
-## 9) What do p50/p95 mean?
+## What do p50/p95 mean?
 
 - **p50**: median latency (typical case)
 - **p95**: 95th percentile latency (tail latency)
@@ -86,25 +86,25 @@ Tail latency often matters most for user experience.
 
 ---
 
-## 10) Does this tool count prompt tokens?
+## Does this tool count prompt tokens?
 
 Currently it relies on streaming `usage` metadata for **completion tokens**. Prompt tokens are not summarized in the table.
 
 ---
 
-## 11) The success rate is < 100%. What counts as failure?
+## The success rate is < 100%. What counts as failure?
 
 Any request that raises an exception (network error, auth error, provider error, timeout) is counted as an error.
 
 ---
 
-## 12) How do I run on Windows?
+## How do I run on Windows?
 
 Use PowerShell examples in [Quickstart](quickstart.md). If you hit PATH issues, install via `pipx`.
 
 ---
 
-## 13) Is the throughput number reliable?
+## Is the throughput number reliable?
 
 It is an approximation:
 
@@ -115,7 +115,7 @@ It is good for **relative comparisons** under the same setup.
 
 ---
 
-## 14) How can I contribute a new provider?
+## How can I contribute a new provider?
 
 Most providers should work via `base_url` if they are OpenAI-compatible.
 

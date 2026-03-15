@@ -6,8 +6,8 @@ import os
 from typing import Optional
 from urllib.parse import urlparse
 
-from .bench import PROVIDER_DEFAULTS
 from .exceptions import ProviderError
+from .providers import PROVIDER_DEFAULTS
 
 
 def validate_provider_name(provider: str) -> str:
@@ -43,7 +43,7 @@ def validate_api_key(provider: str, api_key: Optional[str], env_fallback: bool =
 
     # Local/self-hosted providers are intentionally allowed to be keyless.
     if not env_key:
-        return api_key or "dummy"
+        return api_key.strip() if api_key and api_key.strip() else "dummy"
 
     if api_key and api_key.strip():
         return api_key.strip()

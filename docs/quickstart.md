@@ -55,7 +55,7 @@ lgb run \
 
 **Screenshot placeholder:**
 
-![CLI run output (placeholder)](assets/quickstart-run-output.png)
+![CLI run output (placeholder)](assets/quickstart-run-output.svg)
 
 You will get a table including:
 
@@ -76,7 +76,7 @@ lgb compare example-bench.yaml --output report.md
 
 **Screenshot placeholder:**
 
-![CLI compare output (placeholder)](assets/quickstart-compare-output.png)
+![CLI compare output (placeholder)](assets/quickstart-compare-output.svg)
 
 ---
 
@@ -86,7 +86,7 @@ Open `report.md` and paste it into an issue/PR, or commit it to track regression
 
 **Screenshot placeholder:**
 
-![Markdown report (placeholder)](assets/quickstart-report.png)
+![Markdown report (placeholder)](assets/quickstart-report.svg)
 
 ---
 
