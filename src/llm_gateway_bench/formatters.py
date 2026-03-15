@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Callable, Iterable, Iterator, List, Optional, Sequence, Tuple
+from typing import Iterator, List, Sequence, Tuple
 
 from rich.console import Console
 from rich.panel import Panel

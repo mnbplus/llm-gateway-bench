@@ -17,7 +17,7 @@ import asyncio
 import os
 import statistics
 import time
-from typing import Dict, List, Optional, TypedDict
+from typing import List, Optional, TypedDict
 
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
