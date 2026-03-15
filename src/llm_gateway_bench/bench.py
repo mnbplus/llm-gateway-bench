@@ -1,40 +1,52 @@
-"""Core benchmarking logic."""
+"""Core benchmarking logic.
 
-import time
+The current implementation targets OpenAI-compatible endpoints via the OpenAI Python SDK.
+It sends **streaming** chat completion requests and derives:
+
+- TTFT (time-to-first-token)
+- Total latency
+- Approximate throughput (completion tokens / wall time)
+
+Note: this module intentionally keeps provider logic minimal. Most providers are
+supported via OpenAI-compatible gateways (`base_url`).
+"""
+
+from __future__ import annotations
+
 import asyncio
-import statistics
-from dataclasses import dataclass, field
-from typing import Optional, List
-from openai import AsyncOpenAI
-import anthropic
-from dotenv import load_dotenv
 import os
+import statistics
+import time
+from typing import Dict, List, Optional, TypedDict
+
+from dotenv import load_dotenv
+from openai import AsyncOpenAI
+
+from .models import BenchResult
 
 load_dotenv()
 
 
-@dataclass
-class BenchResult:
-    provider: str
-    model: str
-    ttft_ms: float = 0.0
-    total_ms: float = 0.0
-    tokens_per_sec: float = 0.0
-    success_rate: float = 0.0
-    p95_ms: float = 0.0
-    p50_ms: float = 0.0
-    errors: int = 0
-    total_tokens: int = 0
-    raw_latencies: List[float] = field(default_factory=list)
-
-
-PROVIDER_DEFAULTS = {
+PROVIDER_DEFAULTS: Dict[str, Dict[str, str]] = {
     "openai": {"base_url": "https://api.openai.com/v1", "env_key": "OPENAI_API_KEY"},
     "deepseek": {"base_url": "https://api.deepseek.com/v1", "env_key": "DEEPSEEK_API_KEY"},
     "siliconflow": {"base_url": "https://api.siliconflow.cn/v1", "env_key": "SILICONFLOW_API_KEY"},
-    "dashscope": {"base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1", "env_key": "DASHSCOPE_API_KEY"},
-    "gemini": {"base_url": "https://generativelanguage.googleapis.com/v1beta/openai/", "env_key": "GEMINI_API_KEY"},
+    "dashscope": {
+        "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        "env_key": "DASHSCOPE_API_KEY",
+    },
+    "gemini": {
+        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
+        "env_key": "GEMINI_API_KEY",
+    },
 }
+
+
+class _RequestResult(TypedDict):
+    ttft: float
+    total: float
+    tokens: int
+    error: Optional[str]
 
 
 async def _single_request_openai(
@@ -42,10 +54,10 @@ async def _single_request_openai(
     model: str,
     prompt: str,
     timeout: int,
-) -> dict:
+) -> _RequestResult:
     """Run a single streaming request and measure TTFT + total latency."""
     t_start = time.perf_counter()
-    ttft = None
+    ttft_ms: Optional[float] = None
     total_tokens = 0
 
     try:
@@ -57,15 +69,20 @@ async def _single_request_openai(
                 stream_options={"include_usage": True},
             )
             async for chunk in stream:
-                if ttft is None and chunk.choices and chunk.choices[0].delta.content:
-                    ttft = (time.perf_counter() - t_start) * 1000
+                if ttft_ms is None and chunk.choices and chunk.choices[0].delta.content:
+                    ttft_ms = (time.perf_counter() - t_start) * 1000
                 if chunk.usage:
                     total_tokens = chunk.usage.completion_tokens or 0
 
         total_ms = (time.perf_counter() - t_start) * 1000
-        return {"ttft": ttft or total_ms, "total": total_ms, "tokens": total_tokens, "error": None}
-    except Exception as e:
-        return {"ttft": 0, "total": 0, "tokens": 0, "error": str(e)}
+        return {
+            "ttft": ttft_ms or total_ms,
+            "total": total_ms,
+            "tokens": total_tokens,
+            "error": None,
+        }
+    except Exception as exc:  # pragma: no cover - network errors vary
+        return {"ttft": 0.0, "total": 0.0, "tokens": 0, "error": str(exc)}
 
 
 async def _run_concurrent(
@@ -75,11 +92,11 @@ async def _run_concurrent(
     n_requests: int,
     concurrency: int,
     timeout: int,
-) -> List[dict]:
-    """Run n_requests with controlled concurrency."""
+) -> List[_RequestResult]:
+    """Run ``n_requests`` requests with bounded concurrency."""
     semaphore = asyncio.Semaphore(concurrency)
 
-    async def bounded_request():
+    async def bounded_request() -> _RequestResult:
         async with semaphore:
             return await _single_request_openai(client, model, prompt, timeout)
 
@@ -96,7 +113,20 @@ def run_benchmark(
     base_url: Optional[str] = None,
     timeout: int = 30,
 ) -> BenchResult:
-    """Run benchmark for a single provider/model."""
+    """Run a benchmark for a single provider/model.
+
+    Args:
+        provider: Provider name (e.g. ``openai``).
+        model: Model identifier.
+        prompt: Prompt text used for the run.
+        n_requests: Number of requests to send.
+        concurrency: Maximum concurrent requests.
+        base_url: Optional base URL for OpenAI-compatible endpoints.
+        timeout: Per-request timeout in seconds.
+
+    Returns:
+        A :class:`~llm_gateway_bench.models.BenchResult` with summary statistics.
+    """
     defaults = PROVIDER_DEFAULTS.get(provider, {})
     effective_base_url = base_url or defaults.get("base_url", "https://api.openai.com/v1")
     env_key = defaults.get("env_key", "OPENAI_API_KEY")
@@ -115,11 +145,12 @@ def run_benchmark(
     latencies = [r["total"] for r in successes]
     ttfts = [r["ttft"] for r in successes]
     total_tokens = sum(r["tokens"] for r in successes)
+
     avg_total = statistics.mean(latencies)
     avg_ttft = statistics.mean(ttfts)
     p95 = sorted(latencies)[int(len(latencies) * 0.95) - 1] if len(latencies) >= 20 else max(latencies)
     p50 = statistics.median(latencies)
-    tokens_per_sec = (total_tokens / sum(latencies) * 1000) if sum(latencies) > 0 else 0
+    tokens_per_sec = (total_tokens / sum(latencies) * 1000) if sum(latencies) > 0 else 0.0
 
     return BenchResult(
         provider=provider,
@@ -137,22 +168,23 @@ def run_benchmark(
 
 
 def compare_providers(cfg: dict) -> List[BenchResult]:
-    """Run benchmarks for all providers in config."""
-    results = []
+    """Run benchmarks for all providers defined in the config."""
+    results: List[BenchResult] = []
     prompts = cfg.get("prompts", ["Say hello."])
     prompt = prompts[0] if prompts else "Say hello."
     settings = cfg.get("settings", {})
 
-    for p in cfg.get("providers", []):
-        result = run_benchmark(
-            provider=p["name"],
-            model=p["model"],
-            prompt=prompt,
-            n_requests=settings.get("requests", 20),
-            concurrency=settings.get("concurrency", 3),
-            base_url=p.get("base_url"),
-            timeout=settings.get("timeout", 30),
+    for provider_cfg in cfg.get("providers", []):
+        results.append(
+            run_benchmark(
+                provider=provider_cfg["name"],
+                model=provider_cfg["model"],
+                prompt=prompt,
+                n_requests=settings.get("requests", 20),
+                concurrency=settings.get("concurrency", 3),
+                base_url=provider_cfg.get("base_url"),
+                timeout=settings.get("timeout", 30),
+            )
         )
-        results.append(result)
 
     return results

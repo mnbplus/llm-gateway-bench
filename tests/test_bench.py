@@ -1,14 +1,14 @@
 """Basic tests for llm-gateway-bench."""
 
-import pytest
-from llm_gateway_bench.bench import BenchResult
-from llm_gateway_bench.report import generate_report
-import tempfile
-import os
 import json
+import os
+import tempfile
+
+from llm_gateway_bench.models import BenchResult
+from llm_gateway_bench.report import generate_report
 
 
-def make_result(provider="openai", model="gpt-4o-mini"):
+def make_result(provider: str = "openai", model: str = "gpt-4o-mini") -> BenchResult:
     return BenchResult(
         provider=provider,
         model=model,
@@ -36,7 +36,7 @@ def test_report_json():
         path = f.name
     try:
         generate_report(results, path)
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             data = json.load(f)
         assert len(data) == 2
         assert data[0]["provider"] == "openai"
@@ -50,7 +50,7 @@ def test_report_markdown():
         path = f.name
     try:
         generate_report(results, path)
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             content = f.read()
         assert "openai" in content
         assert "gpt-4o-mini" in content

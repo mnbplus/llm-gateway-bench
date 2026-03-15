@@ -1,13 +1,16 @@
 """Report generation for benchmark results."""
 
-import json
+from __future__ import annotations
+
 import csv
+import json
 from pathlib import Path
 from typing import List
-from .bench import BenchResult
+
+from .models import BenchResult
 
 
-def generate_report(results: List[BenchResult], output_path: str):
+def generate_report(results: List[BenchResult], output_path: str) -> None:
     """Generate a report in md, json, or csv format based on file extension."""
     ext = Path(output_path).suffix.lower()
 
@@ -19,7 +22,7 @@ def generate_report(results: List[BenchResult], output_path: str):
         _write_markdown(results, output_path)
 
 
-def _write_markdown(results: List[BenchResult], path: str):
+def _write_markdown(results: List[BenchResult], path: str) -> None:
     lines = [
         "# LLM Gateway Bench Report\n",
         "| Provider | Model | TTFT (ms) | Total (ms) | Tokens/sec | P95 (ms) | Success Rate |\n",
@@ -30,11 +33,10 @@ def _write_markdown(results: List[BenchResult], path: str):
             f"| {r.provider} | {r.model} | {r.ttft_ms:.0f} | {r.total_ms:.0f} "
             f"| {r.tokens_per_sec:.1f} | {r.p95_ms:.0f} | {r.success_rate:.0%} |\n"
         )
-    with open(path, "w", encoding="utf-8") as f:
-        f.writelines(lines)
+    Path(path).write_text("".join(lines), encoding="utf-8")
 
 
-def _write_json(results: List[BenchResult], path: str):
+def _write_json(results: List[BenchResult], path: str) -> None:
     data = [
         {
             "provider": r.provider,
@@ -50,12 +52,21 @@ def _write_json(results: List[BenchResult], path: str):
         }
         for r in results
     ]
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
+    Path(path).write_text(json.dumps(data, indent=2), encoding="utf-8")
 
 
-def _write_csv(results: List[BenchResult], path: str):
-    fields = ["provider", "model", "ttft_ms", "total_ms", "tokens_per_sec", "p95_ms", "p50_ms", "success_rate", "errors"]
+def _write_csv(results: List[BenchResult], path: str) -> None:
+    fields = [
+        "provider",
+        "model",
+        "ttft_ms",
+        "total_ms",
+        "tokens_per_sec",
+        "p95_ms",
+        "p50_ms",
+        "success_rate",
+        "errors",
+    ]
     with open(path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fields)
         writer.writeheader()

@@ -139,3 +139,17 @@ PRs welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 ## License
 
 MIT — see [LICENSE](LICENSE)
+
+---
+
+## Project links
+
+- Documentation: `docs/` (start here: `docs/configuration.md`)
+- Providers: `docs/providers.md`
+- Changelog: `CHANGELOG.md`
+
+## Badges
+
+[![CI](https://github.com/YOUR_USERNAME/llm-gateway-bench/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/llm-gateway-bench/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/llm-gateway-bench)](https://pypi.org/project/llm-gateway-bench/)
+[![Coverage](https://img.shields.io/codecov/c/github/YOUR_USERNAME/llm-gateway-bench)](https://codecov.io/gh/YOUR_USERNAME/llm-gateway-bench)
