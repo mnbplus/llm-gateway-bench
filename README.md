@@ -4,11 +4,31 @@
 
 > A CLI benchmarking tool for LLM API gateways — measure latency, TTFT, and throughput across providers.
 
-[![CI](https://github.com/mnbplus/llm-gateway-bench/actions/workflows/ci.yml/badge.svg)](https://github.com/mnbplus/llm-gateway-bench/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/)
-[![PyPI version](https://img.shields.io/pypi/v/llm-gateway-bench)](https://pypi.org/project/llm-gateway-bench/)
-[![Coverage](https://img.shields.io/codecov/c/github/mnbplus/llm-gateway-bench)](https://codecov.io/gh/mnbplus/llm-gateway-bench)
+<p align="center">
+  <a href="https://github.com/YOUR_USERNAME/llm-gateway-bench/actions/workflows/ci.yml">
+    <img src="https://github.com/YOUR_USERNAME/llm-gateway-bench/actions/workflows/ci.yml/badge.svg" alt="CI">
+  </a>
+  <a href="https://pypi.org/project/llm-gateway-bench/">
+    <img src="https://img.shields.io/pypi/v/llm-gateway-bench" alt="PyPI">
+  </a>
+  <a href="https://codecov.io/gh/YOUR_USERNAME/llm-gateway-bench">
+    <img src="https://img.shields.io/codecov/c/github/YOUR_USERNAME/llm-gateway-bench" alt="Coverage">
+  </a>
+  <a href="https://pypi.org/project/llm-gateway-bench/">
+    <img src="https://img.shields.io/pypi/pyversions/llm-gateway-bench" alt="Python Versions">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License">
+  </a>
+</p>
+
+---
+
+**Documentation**: `docs/` → `docs/configuration.md` • `docs/providers.md`
+
+**Source Code**: https://github.com/YOUR_USERNAME/llm-gateway-bench
+
+---
 
 ## Why?
 
@@ -33,10 +53,7 @@ pip install llm-gateway-bench
 lgb run --provider openai --model gpt-5-mini --requests 20
 
 # Compare multiple providers
-lgb compare bench.yaml
-
-# List supported providers
-lgb providers
+lgb compare bench.yaml --output report.md
 ```
 
 ## Installation
@@ -46,7 +63,7 @@ lgb providers
 pip install llm-gateway-bench
 
 # From source
-git clone https://github.com/mnbplus/llm-gateway-bench
+git clone https://github.com/YOUR_USERNAME/llm-gateway-bench
 cd llm-gateway-bench
 pip install -e .
 ```
@@ -58,7 +75,7 @@ pip install -e .
 ```bash
 lgb run \
   --provider openai \
-  --model gpt-5-mini \
+  --model gpt-5.4 \
   --requests 50 \
   --concurrency 5 \
   --prompt "Explain quantum computing in one sentence."
@@ -78,8 +95,13 @@ providers:
     api_key: ${OPENAI_API_KEY}
 
   - name: anthropic
-    model: claude-haiku-4
+    model: claude-sonnet-4-5
     api_key: ${ANTHROPIC_API_KEY}
+
+  - name: gemini
+    model: gemini-2.5-pro
+    base_url: https://generativelanguage.googleapis.com/v1beta/openai/
+    api_key: ${GEMINI_API_KEY}
 
   - name: deepseek
     model: deepseek-v3
@@ -87,12 +109,12 @@ providers:
     api_key: ${DEEPSEEK_API_KEY}
 
   - name: siliconflow
-    model: Pro/deepseek-ai/DeepSeek-V3
+    model: deepseek-v3
     base_url: https://api.siliconflow.cn/v1
     api_key: ${SILICONFLOW_API_KEY}
 
   - name: dashscope
-    model: qwen3-max
+    model: qwen3-plus
     base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
     api_key: ${DASHSCOPE_API_KEY}
 
@@ -109,28 +131,27 @@ lgb compare bench.yaml --output report.md
 ### Sample Output
 
 ```
-┌─────────────────┬──────────────────┬──────────┬────────────┬──────────────┐
-│ Provider        │ Model            │ TTFT (ms)│ Total (ms) │ Tokens/sec   │
-├─────────────────┼──────────────────┼──────────┼────────────┼──────────────┤
-│ openai          │ gpt-5-mini       │  198     │  1240      │  94.5        │
-│ anthropic       │ claude-haiku-4   │  312     │  1680      │  76.2        │
-│ deepseek        │ deepseek-v3      │  720     │  2800      │  48.3        │
-│ siliconflow     │ DeepSeek-V3      │  580     │  2400      │  55.1        │
-│ dashscope       │ qwen3-max        │  440     │  2100      │  62.7        │
-└─────────────────┴──────────────────┴──────────┴────────────┴──────────────┘
+┌─────────────────┬──────────────────────┬──────────┬────────────┬──────────────┐
+│ Provider        │ Model                │ TTFT (ms)│ Total (ms) │ Tokens/sec   │
+├─────────────────┼──────────────────────┼──────────┼────────────┼──────────────┤
+│ openai          │ gpt-5-mini           │  312     │  1840      │  68.2        │
+│ anthropic       │ claude-sonnet-4-5    │  428     │  2100      │  54.1        │
+│ deepseek        │ deepseek-v3          │  890     │  3200      │  42.3        │
+│ siliconflow     │ deepseek-v3          │  654     │  2800      │  48.7        │
+└─────────────────┴──────────────────────┴──────────┴────────────┴──────────────┘
 ```
 
 ## Supported Providers
 
-| Provider | Status | Latest Models | Notes |
-|----------|--------|---------------|-------|
-| OpenAI | ✅ | gpt-5.4, gpt-5-mini, o3, o4-mini | Requires `OPENAI_API_KEY` |
-| Anthropic | ✅ | claude-opus-4, claude-sonnet-4-5, claude-haiku-4 | Requires `ANTHROPIC_API_KEY` |
-| Google Gemini | ✅ | gemini-2.5-pro, gemini-2.5-flash | Requires `GEMINI_API_KEY` |
-| DeepSeek | ✅ | deepseek-v3, deepseek-r2 | Via OpenAI-compatible API |
-| Qwen (Alibaba) | ✅ | qwen3-max, qwen3-plus, qwen3-turbo | Via DashScope |
-| SiliconFlow | ✅ | DeepSeek-V3, Qwen3, and more | Requires `SILICONFLOW_API_KEY` |
-| Any OpenAI-compat | ✅ | Any model | Use `--base-url` |
+| Provider | Status | Notes |
+|----------|--------|-------|
+| OpenAI | ✅ | gpt-5.4, gpt-5-mini, o3, o4-mini |
+| Anthropic | ✅ | claude-opus-4, claude-sonnet-4-5, claude-haiku-4 |
+| Google Gemini | ✅ | gemini-2.5-pro, gemini-2.5-flash |
+| DeepSeek | ✅ | deepseek-v3, deepseek-r2 |
+| Qwen (Alibaba) | ✅ | qwen3-max, qwen3-plus |
+| SiliconFlow | ✅ | deepseek-v3, deepseek-r2 |
+| Any OpenAI-compat | ✅ | Custom base_url support |
 
 ## Configuration
 
@@ -140,9 +161,6 @@ Set API keys via environment variables or `.env` file:
 export OPENAI_API_KEY=sk-...
 export ANTHROPIC_API_KEY=sk-ant-...
 export DEEPSEEK_API_KEY=sk-...
-export SILICONFLOW_API_KEY=sk-...
-export DASHSCOPE_API_KEY=sk-...
-export GEMINI_API_KEY=...
 ```
 
 ## Contributing
@@ -155,4 +173,8 @@ MIT — see [LICENSE](LICENSE)
 
 ---
 
-**Links:** [Docs](docs/) · [Changelog](CHANGELOG.md) · [Issues](https://github.com/mnbplus/llm-gateway-bench/issues)
+## Project links
+
+- Documentation: `docs/` (start here: `docs/configuration.md`)
+- Providers: `docs/providers.md`
+- Changelog: `CHANGELOG.md`

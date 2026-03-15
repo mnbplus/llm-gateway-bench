@@ -4,7 +4,6 @@ import typer
 from typing import Optional
 from rich.console import Console
 from rich.table import Table
-from rich import print as rprint
 
 from .bench import run_benchmark, compare_providers
 from .config import load_config
@@ -75,13 +74,18 @@ def providers():
     table.add_column("Models (examples)", style="white")
     table.add_column("Notes", style="dim")
 
-    table.add_row("openai", "gpt-4o, gpt-4o-mini, o1-mini", "Requires OPENAI_API_KEY")
-    table.add_row("anthropic", "claude-3-5-haiku, claude-3-5-sonnet", "Requires ANTHROPIC_API_KEY")
-    table.add_row("gemini", "gemini-1.5-flash, gemini-1.5-pro", "Requires GEMINI_API_KEY")
-    table.add_row("deepseek", "deepseek-chat, deepseek-reasoner", "Requires DEEPSEEK_API_KEY")
-    table.add_row("siliconflow", "deepseek-ai/DeepSeek-V3", "Requires SILICONFLOW_API_KEY")
-    table.add_row("dashscope", "qwen-max, qwen-plus", "Requires DASHSCOPE_API_KEY")
-    table.add_row("custom", "any model", "Use --base-url for OpenAI-compat APIs")
+    table.add_row("openai", "gpt-5.4, gpt-5-mini, o3, o4-mini, gpt-4.1, gpt-4.1-mini", "Requires OPENAI_API_KEY")
+    table.add_row("anthropic", "claude-opus-4, claude-sonnet-4-5, claude-haiku-4", "Requires ANTHROPIC_API_KEY")
+    table.add_row("gemini", "gemini-2.5-pro, gemini-2.5-flash, gemini-2.0-flash", "Requires GEMINI_API_KEY")
+    table.add_row("deepseek", "deepseek-v3, deepseek-r2, deepseek-v3-0324", "Requires DEEPSEEK_API_KEY")
+    table.add_row("siliconflow", "Pro/deepseek-ai/DeepSeek-V3, Qwen/Qwen3-235B-A22B", "Requires SILICONFLOW_API_KEY")
+    table.add_row("dashscope", "qwen3-max, qwen3-plus, qwen3-turbo, qwen3-235b-a22b", "Requires DASHSCOPE_API_KEY")
+    table.add_row("groq", "llama-3.3-70b-versatile, llama-3.1-8b-instant, gemma2-9b-it", "Requires GROQ_API_KEY")
+    table.add_row("mistral", "mistral-large-latest, mistral-small-latest, codestral-latest", "Requires MISTRAL_API_KEY")
+    table.add_row("openrouter", "100+ models: meta-llama/*, google/*, mistralai/*", "Requires OPENROUTER_API_KEY")
+    table.add_row("ollama", "llama3.2, qwen2.5, mistral, phi4, gemma3", "base_url=http://localhost:11434/v1, api_key=ollama")
+    table.add_row("vllm", "Any HuggingFace model", "base_url=http://your-server:8000/v1")
+    table.add_row("custom", "any model", "Use --base-url for any OpenAI-compat API")
 
     console.print(table)
 

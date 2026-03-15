@@ -1,29 +1,77 @@
 # Example bench.yaml for llm-gateway-bench
 # Run: lgb compare example-bench.yaml --output report.md
+#
+# Tip: Any OpenAI-compatible endpoint works — just set base_url + model.
+# Set API keys in .env or environment variables.
 
 prompts:
   - "Write a haiku about the ocean."
   - "What is the capital of France? Reply in one word."
+  - "Explain recursion in one sentence."
 
 providers:
+  # ── OpenAI ──────────────────────────────────────────────────────────────
   - name: openai
-    model: gpt-4o-mini
+    model: gpt-5-mini          # also: gpt-5.4, o3, o4-mini, gpt-4.1, gpt-4.1-mini
     api_key: ${OPENAI_API_KEY}
 
+  # ── Anthropic ────────────────────────────────────────────────────────────
+  - name: anthropic
+    model: claude-haiku-4      # also: claude-sonnet-4-5, claude-opus-4
+    api_key: ${ANTHROPIC_API_KEY}
+
+  # ── Google Gemini ────────────────────────────────────────────────────────
+  - name: gemini
+    model: gemini-2.5-flash    # also: gemini-2.5-pro, gemini-2.0-flash
+    base_url: https://generativelanguage.googleapis.com/v1beta/openai/
+    api_key: ${GEMINI_API_KEY}
+
+  # ── DeepSeek ─────────────────────────────────────────────────────────────
   - name: deepseek
-    model: deepseek-chat
+    model: deepseek-v3         # also: deepseek-r2, deepseek-v3-0324
     base_url: https://api.deepseek.com/v1
     api_key: ${DEEPSEEK_API_KEY}
 
+  # ── Alibaba DashScope (Qwen) ─────────────────────────────────────────────
+  - name: dashscope
+    model: qwen3-max           # also: qwen3-plus, qwen3-turbo, qwen3-235b-a22b
+    base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    api_key: ${DASHSCOPE_API_KEY}
+
+  # ── SiliconFlow ──────────────────────────────────────────────────────────
   - name: siliconflow
-    model: Pro/deepseek-ai/DeepSeek-V3
+    model: Pro/deepseek-ai/DeepSeek-V3   # also: Qwen/Qwen3-235B-A22B
     base_url: https://api.siliconflow.cn/v1
     api_key: ${SILICONFLOW_API_KEY}
 
-  - name: dashscope
-    model: qwen-plus
-    base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
-    api_key: ${DASHSCOPE_API_KEY}
+  # ── Groq (ultra-fast inference) ──────────────────────────────────────────
+  - name: groq
+    model: llama-3.3-70b-versatile  # also: llama-3.1-8b-instant, gemma2-9b-it
+    base_url: https://api.groq.com/openai/v1
+    api_key: ${GROQ_API_KEY}
+
+  # ── Mistral ──────────────────────────────────────────────────────────────
+  - name: mistral
+    model: mistral-small-latest  # also: mistral-large-latest, codestral-latest
+    base_url: https://api.mistral.ai/v1
+    api_key: ${MISTRAL_API_KEY}
+
+  # ── OpenRouter (access 100+ models) ──────────────────────────────────────
+  - name: openrouter
+    model: meta-llama/llama-3.3-70b-instruct  # any model on openrouter.ai
+    base_url: https://openrouter.ai/api/v1
+    api_key: ${OPENROUTER_API_KEY}
+
+  # ── Custom / Self-hosted ──────────────────────────────────────────────────
+  # - name: local-ollama
+  #   model: llama3.2
+  #   base_url: http://localhost:11434/v1
+  #   api_key: ollama
+
+  # - name: custom-vllm
+  #   model: Qwen/Qwen2.5-7B-Instruct
+  #   base_url: http://your-server:8000/v1
+  #   api_key: ${VLLM_API_KEY}
 
 settings:
   requests: 20

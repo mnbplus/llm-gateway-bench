@@ -2,40 +2,58 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja.md)
 
-> LLM API 网关基准测试 CLI 工具 — 测量多个服务商的延迟、首 token 时间和吞吐量。
+> 用于 LLM API 网关的 CLI 基准测试工具 —— 测量延迟、首 token 延迟（TTFT）与吞吐量。
 
-[![CI](https://github.com/mnbplus/llm-gateway-bench/actions/workflows/ci.yml/badge.svg)](https://github.com/mnbplus/llm-gateway-bench/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/)
-[![PyPI](https://img.shields.io/pypi/v/llm-gateway-bench)](https://pypi.org/project/llm-gateway-bench/)
+<p align="center">
+  <a href="https://github.com/YOUR_USERNAME/llm-gateway-bench/actions/workflows/ci.yml">
+    <img src="https://github.com/YOUR_USERNAME/llm-gateway-bench/actions/workflows/ci.yml/badge.svg" alt="CI">
+  </a>
+  <a href="https://pypi.org/project/llm-gateway-bench/">
+    <img src="https://img.shields.io/pypi/v/llm-gateway-bench" alt="PyPI">
+  </a>
+  <a href="https://codecov.io/gh/YOUR_USERNAME/llm-gateway-bench">
+    <img src="https://img.shields.io/codecov/c/github/YOUR_USERNAME/llm-gateway-bench" alt="Coverage">
+  </a>
+  <a href="https://pypi.org/project/llm-gateway-bench/">
+    <img src="https://img.shields.io/pypi/pyversions/llm-gateway-bench" alt="Python Versions">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License">
+  </a>
+</p>
+
+---
+
+**文档**：`docs/` → `docs/configuration.md` • `docs/providers.md`
+
+**源码**：https://github.com/YOUR_USERNAME/llm-gateway-bench
+
+---
 
 ## 为什么需要它？
 
-选择 LLM API 服务商很难。定价页面无法告诉你真实世界的延迟、首 token 延迟，或者高负载下性能如何下降。`llm-gateway-bench` 给你**客观、可复现的基准测试数据**，帮助你做出明智的决策。
+选择 LLM API 提供商并不容易。价格页面并不会告诉你真实的延迟、首 token 时间或高并发下的性能衰减。`llm-gateway-bench` 提供 **客观、可复现** 的基准数据，帮助你做出更可靠的决策。
 
-## 功能特性
+## 功能亮点
 
-- ⚡ **TTFT**（Time To First Token，首 token 时间）测量
-- 📊 **吞吐量**（tokens/秒）基准测试
-- 🔄 **并发请求**模拟
-- 🌐 **多服务商**支持：OpenAI、Anthropic、Google Gemini、DeepSeek、通义千问、硅基流动等
-- 📈 **报告生成**：Markdown、JSON、CSV 格式
-- 🔧 通过 YAML 配置**自定义负载**
-- 🏃 **CLI 优先**设计，无需 GUI
+- ⚡ **TTFT**（Time To First Token）测量
+- 📊 **吞吐量**（tokens/sec）基准
+- 🔄 **并发请求** 模拟
+- 🌐 **多 Provider** 支持：OpenAI、Anthropic、Google Gemini、DeepSeek、Qwen、SiliconFlow，以及任意 OpenAI 兼容网关
+- 📈 **报告生成**（Markdown / JSON / CSV）
+- 🔧 **YAML 配置** 自定义请求
+- 🏃 **CLI 优先**，无需 GUI
 
 ## 快速开始
 
 ```bash
 pip install llm-gateway-bench
 
-# 运行快速基准测试
+# 快速跑一次
 lgb run --provider openai --model gpt-5-mini --requests 20
 
-# 比较多个服务商
-lgb compare bench.yaml
-
-# 查看支持的服务商列表
-lgb providers
+# 多 Provider 对比
+lgb compare bench.yaml --output report.md
 ```
 
 ## 安装
@@ -45,51 +63,60 @@ lgb providers
 pip install llm-gateway-bench
 
 # 从源码安装
-git clone https://github.com/mnbplus/llm-gateway-bench
+git clone https://github.com/YOUR_USERNAME/llm-gateway-bench
 cd llm-gateway-bench
 pip install -e .
 ```
 
-## 使用方法
+## 使用示例
 
-### 单服务商基准测试
+### 单 Provider 基准
 
 ```bash
 lgb run \
-  --provider dashscope \
-  --model qwen3-max \
+  --provider openai \
+  --model gpt-5.4 \
   --requests 50 \
   --concurrency 5 \
   --prompt "用一句话解释量子计算。"
 ```
 
-### 多服务商对比
+### 多 Provider 对比
 
 ```yaml
 # bench.yaml
 prompts:
-  - "用一句话解释量子计算。"
-  - "2+2等于几？只回复数字。"
+  - "写一首关于海洋的俳句。"
+  - "2+2 等于几？只回复数字。"
 
 providers:
   - name: openai
     model: gpt-5-mini
     api_key: ${OPENAI_API_KEY}
 
+  - name: anthropic
+    model: claude-sonnet-4-5
+    api_key: ${ANTHROPIC_API_KEY}
+
+  - name: gemini
+    model: gemini-2.5-pro
+    base_url: https://generativelanguage.googleapis.com/v1beta/openai/
+    api_key: ${GEMINI_API_KEY}
+
   - name: deepseek
     model: deepseek-v3
     base_url: https://api.deepseek.com/v1
     api_key: ${DEEPSEEK_API_KEY}
 
-  - name: dashscope
-    model: qwen3-max
-    base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
-    api_key: ${DASHSCOPE_API_KEY}
-
   - name: siliconflow
-    model: Pro/deepseek-ai/DeepSeek-V3
+    model: deepseek-v3
     base_url: https://api.siliconflow.cn/v1
     api_key: ${SILICONFLOW_API_KEY}
+
+  - name: dashscope
+    model: qwen3-plus
+    base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    api_key: ${DASHSCOPE_API_KEY}
 
 settings:
   requests: 30
@@ -101,37 +128,53 @@ settings:
 lgb compare bench.yaml --output report.md
 ```
 
-## 支持的服务商
+### 输出示例
 
-| 服务商 | 状态 | 最新模型 | 说明 |
-|--------|------|----------|------|
-| OpenAI | ✅ | gpt-5.4, gpt-5-mini, o3, o4-mini | 需要 `OPENAI_API_KEY` |
-| Anthropic | ✅ | claude-opus-4, claude-sonnet-4-5, claude-haiku-4 | 需要 `ANTHROPIC_API_KEY` |
-| Google Gemini | ✅ | gemini-2.5-pro, gemini-2.5-flash | 需要 `GEMINI_API_KEY` |
-| DeepSeek | ✅ | deepseek-v3, deepseek-r2 | OpenAI 兼容 API |
-| 通义千问 | ✅ | qwen3-max, qwen3-plus, qwen3-turbo | 通过 DashScope |
-| 硅基流动 | ✅ | DeepSeek-V3、Qwen3 等 | 需要 `SILICONFLOW_API_KEY` |
-| 任意 OpenAI 兼容 | ✅ | 任意模型 | 使用 `--base-url` |
+```
+┌─────────────────┬──────────────────────┬──────────┬────────────┬──────────────┐
+│ Provider        │ Model                │ TTFT (ms)│ Total (ms) │ Tokens/sec   │
+├─────────────────┼──────────────────────┼──────────┼────────────┼──────────────┤
+│ openai          │ gpt-5-mini           │  312     │  1840      │  68.2        │
+│ anthropic       │ claude-sonnet-4-5    │  428     │  2100      │  54.1        │
+│ deepseek        │ deepseek-v3          │  890     │  3200      │  42.3        │
+│ siliconflow     │ deepseek-v3          │  654     │  2800      │  48.7        │
+└─────────────────┴──────────────────────┴──────────┴────────────┴──────────────┘
+```
+
+## 支持的 Provider
+
+| Provider | 状态 | 备注 |
+|----------|------|------|
+| OpenAI | ✅ | gpt-5.4, gpt-5-mini, o3, o4-mini |
+| Anthropic | ✅ | claude-opus-4, claude-sonnet-4-5, claude-haiku-4 |
+| Google Gemini | ✅ | gemini-2.5-pro, gemini-2.5-flash |
+| DeepSeek | ✅ | deepseek-v3, deepseek-r2 |
+| Qwen (Alibaba) | ✅ | qwen3-max, qwen3-plus |
+| SiliconFlow | ✅ | deepseek-v3, deepseek-r2 |
+| Any OpenAI-compat | ✅ | 自定义 base_url 支持 |
 
 ## 配置
 
-通过环境变量或 `.env` 文件设置 API Key：
+可通过环境变量或 `.env` 提供密钥：
 
 ```bash
 export OPENAI_API_KEY=sk-...
-export DASHSCOPE_API_KEY=sk-...
+export ANTHROPIC_API_KEY=sk-ant-...
 export DEEPSEEK_API_KEY=sk-...
-export SILICONFLOW_API_KEY=sk-...
 ```
 
 ## 贡献
 
-欢迎 PR！详见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+欢迎 PR！请参考 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ## 许可证
 
-MIT — 详见 [LICENSE](LICENSE)
+MIT — 见 [LICENSE](LICENSE)
 
 ---
 
-**链接：** [文档](docs/) · [更新日志](CHANGELOG.md) · [Issues](https://github.com/mnbplus/llm-gateway-bench/issues)
+## 项目链接
+
+- 文档：`docs/`（从 `docs/configuration.md` 开始）
+- Provider 说明：`docs/providers.md`
+- 更新日志：`CHANGELOG.md`
