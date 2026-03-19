@@ -5,6 +5,10 @@
 [English](README.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja.md)
 
 <p align="center">
+  <img src="docs/assets/github-hero.svg" alt="llm-gateway-bench hero banner" width="100%" />
+</p>
+
+<p align="center">
   <a href="https://github.com/mnbplus/llm-gateway-bench/actions/workflows/ci.yml">
     <img src="https://github.com/mnbplus/llm-gateway-bench/actions/workflows/ci.yml/badge.svg" alt="CI">
   </a>
@@ -28,10 +32,6 @@
   <a href="docs/providers.md">Providers</a> ·
   <a href="https://pypi.org/project/llm-gateway-bench/">PyPI</a> ·
   <a href="https://github.com/mnbplus/llm-gateway-bench/releases">Releases</a>
-</p>
-
-<p align="center">
-  <img src="docs/images/screenshot.jpg" alt="llm-gateway-bench terminal demo" width="860" />
 </p>
 
 ## Why this exists
