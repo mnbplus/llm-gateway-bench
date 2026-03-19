@@ -48,6 +48,9 @@ markdown_extensions:
   - pymdownx.superfences
   - pymdownx.details
 
+extra_css:
+  - stylesheets/extra.css
+
 plugins:
   - search
   - git-revision-date-localized:
