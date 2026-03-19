@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "llm-gateway-bench"
 version = "0.2.0"
-description = "CLI benchmarking tool for LLM API gateways — measure latency, TTFT, and throughput across providers"
+description = "CLI benchmark suite for LLM providers and OpenAI-compatible gateways. Measure TTFT, latency, p95, throughput, warmup, and history."
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.9"
