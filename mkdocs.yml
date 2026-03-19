@@ -1,5 +1,5 @@
 site_name: llm-gateway-bench
-site_description: Benchmark LLM API gateways - latency, TTFT, throughput.
+site_description: CLI benchmark suite for LLM providers and OpenAI-compatible gateways.
 repo_url: https://github.com/mnbplus/llm-gateway-bench
 repo_name: llm-gateway-bench
 edit_uri: edit/main/docs/
