@@ -1,46 +1,47 @@
 # llm-gateway-bench
 
+![llm-gateway-bench hero](assets/github-hero.svg)
+
 *Benchmark real-world latency, TTFT, and throughput for LLM providers and OpenAI-compatible gateways.*
 
-`llm-gateway-bench` is a CLI-first tool for answering practical questions about model and gateway behavior:
+`llm-gateway-bench` is built for one job: measuring what pricing pages and model cards cannot tell you.
+
+[Quickstart](quickstart.md){ .md-button .md-button--primary }
+[Provider Matrix](providers.md){ .md-button }
+[GitHub Repo](https://github.com/mnbplus/llm-gateway-bench){ .md-button }
+
+---
+
+## What it helps you answer
 
 - Which provider has the best TTFT for my prompt shape?
-- How does throughput change under concurrency?
-- Did a deploy, model switch, or region change regress performance?
-- Is my relay layer slower than the upstream API?
+- What happens to latency and throughput when concurrency increases?
+- Did a deploy, region change, model switch, or gateway release regress performance?
+- Is my OpenAI-compatible relay actually faster than the upstream API?
 
 ---
 
-## Quick navigation
+## Designed for real comparison work
 
-- **Install**: [Installation](installation.md)
-- **Get running in minutes**: [Quickstart](quickstart.md)
-- **Build reproducible YAML suites**: [Configuration](configuration.md)
-- **See provider defaults and gotchas**: [Providers](providers.md)
-- **Advanced workflows and CI**: [Advanced usage](advanced.md)
-- **Questions and troubleshooting**: [FAQ](faq.md)
-- **Contribute**: [Contributing](contributing.md)
+| Measure | Compare | Export |
+| --- | --- | --- |
+| TTFT, total latency, p50, p95, throughput, success rate | Providers, relays, regions, releases, self-hosted endpoints | Markdown, JSON, CSV, plus local run history |
 
----
-
-## What it measures
-
-| Area | Metrics |
+| Best fit | Typical targets |
 | --- | --- |
-| Latency | TTFT, total latency, p50, p95 |
-| Throughput | Completion tokens per second |
-| Reliability | Success rate and error count |
-| Comparison | Provider, region, gateway, release, self-hosted target |
+| Provider evaluation | OpenAI, Anthropic, Gemini, Groq, DeepSeek, OpenRouter |
+| Gateway validation | OpenAI-compatible relay layers and API gateways |
+| Regression tracking | Regional routing changes, load balancers, model rollouts, self-hosted serving |
 
 ---
 
-## Typical workflow
+## Core workflow
 
-1. Check built-in defaults with `lgb providers`.
-2. Verify reachability with `lgb warmup bench.yaml`.
-3. Tune a single target with `lgb run`.
-4. Compare multiple targets with `lgb compare`.
-5. Save runs and compare later with `lgb history --compare`.
+1. Inspect built-in defaults with `lgb providers`.
+2. Validate reachability with `lgb warmup bench.yaml`.
+3. Tune one target with `lgb run`.
+4. Compare a full suite with `lgb compare`.
+5. Save and compare runs later with `lgb history --compare`.
 
 ---
 
@@ -54,14 +55,45 @@ lgb providers
 lgb run --provider openai --model gpt-5-mini --requests 20 --concurrency 3 \
   --prompt "Say hello in one sentence."
 
-lgb compare example-bench.yaml --output report.md
+lgb compare example-bench.yaml --output report.md --save
 ```
+
+---
+
+## Example benchmark suite
+
+```yaml
+prompts:
+  - "Write a haiku about the ocean."
+
+providers:
+  - name: openai
+    model: gpt-5-mini
+    api_key: ${OPENAI_API_KEY}
+
+  - name: gemini
+    model: gemini-2.5-flash
+    base_url: https://generativelanguage.googleapis.com/v1beta/openai/
+    api_key: ${GEMINI_API_KEY}
+
+  - name: deepseek
+    model: deepseek-v3
+    base_url: https://api.deepseek.com/v1
+    api_key: ${DEEPSEEK_API_KEY}
+
+settings:
+  requests: 20
+  concurrency: 3
+  timeout: 30
+```
+
+See [Configuration](configuration.md) for the full schema.
 
 ---
 
 ## Supported targets
 
-`llm-gateway-bench` ships with defaults for:
+Out of the box, `llm-gateway-bench` ships with defaults for:
 
 - OpenAI, Anthropic, Google Gemini
 - DeepSeek, Groq, Together, Fireworks, OpenRouter, Mistral, Cohere, Perplexity
@@ -69,20 +101,21 @@ lgb compare example-bench.yaml --output report.md
 - Ollama, vLLM, LM Studio
 - Any OpenAI-compatible endpoint via `base_url`
 
-See the full matrix in [Providers](providers.md).
+For the full matrix and provider-specific notes, see [Providers](providers.md).
 
 ---
 
-## Project scope
+## Scope
 
 - Targets OpenAI-compatible streaming chat completion APIs
 - Optimized for benchmarking, not API proxying or model routing
-- Best fit for provider evaluation, gateway validation, and regression tracking
+- Best fit for provider evaluation, gateway validation, and performance regression tracking
 
 ---
 
 ## Continue
 
-- Start with [Quickstart](quickstart.md)
-- Build a reproducible suite in [Configuration](configuration.md)
-- Wire it into CI via [Advanced usage](advanced.md)
+- Get running in minutes: [Quickstart](quickstart.md)
+- Build reproducible suites: [Configuration](configuration.md)
+- Check provider gotchas: [Providers](providers.md)
+- Wire it into CI: [Advanced usage](advanced.md)
