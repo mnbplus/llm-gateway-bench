@@ -2,12 +2,22 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
-class ProviderConfig(BaseModel):
+class DictLikeModel(BaseModel):
+    """Pydantic model with light dict-style access for backward compatibility."""
+
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def get(self, key: str, default: Any = None) -> Any:
+        return getattr(self, key, default)
+
+
+class ProviderConfig(DictLikeModel):
     """Configuration for a single provider."""
 
     name: str = Field(..., min_length=1)
@@ -31,7 +41,7 @@ class ProviderConfig(BaseModel):
         return value or None
 
 
-class SettingsConfig(BaseModel):
+class SettingsConfig(DictLikeModel):
     """Global benchmark settings."""
 
     requests: int = Field(20, gt=0)
@@ -41,12 +51,18 @@ class SettingsConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class BenchConfig(BaseModel):
+class BenchConfig(DictLikeModel):
     """Top-level benchmark configuration."""
 
     prompts: List[str] = Field(default_factory=lambda: ["Say hello."])
     providers: List[ProviderConfig] = Field(default_factory=list)
-    settings: SettingsConfig = Field(default_factory=SettingsConfig)
+    settings: SettingsConfig = Field(
+        default_factory=lambda: SettingsConfig(
+            requests=20,
+            concurrency=3,
+            timeout=30,
+        )
+    )
 
     model_config = ConfigDict(extra="forbid")
 
@@ -55,7 +71,7 @@ class BenchConfig(BaseModel):
         return self.prompts[0] if self.prompts else "Say hello."
 
 
-class BenchResult(BaseModel):
+class BenchResult(DictLikeModel):
     """Summary statistics for a benchmark run."""
 
     provider: str

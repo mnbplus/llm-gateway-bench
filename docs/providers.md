@@ -19,10 +19,10 @@ When you run:
 lgb run --provider openai --model gpt-4.1-mini
 ```
 
-The runner looks up defaults in `src/llm_gateway_bench/bench.py`:
+The runner looks up defaults in `src/llm_gateway_bench/providers.py`:
 
 - `base_url`: if you didn't pass `--base-url`
-- `env_key`: which environment variable to read
+- `env_key`: which environment variable to read when `--api-key` or YAML `api_key` is not provided
 
 You can always override the endpoint:
 
@@ -107,6 +107,14 @@ providers:
   - name: vllm
     model: meta-llama/Llama-3.1-8B-Instruct
     base_url: http://10.0.0.12:8000/v1
+```
+
+You can also pass a key directly on the CLI:
+
+```bash
+lgb run --provider custom --model my-model \
+  --base-url https://my-gateway.example/v1 \
+  --api-key "$MY_GATEWAY_API_KEY"
 ```
 
 ---

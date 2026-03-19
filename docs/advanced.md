@@ -161,4 +161,4 @@ providers:
       X-Title: llm-gateway-bench
 ```
 
-Note: currently only `name`, `model`, `base_url` are used by the runner; `api_key` is read from **environment variables**, not the YAML field. See [FAQ](faq.md#why-is-api_key-in-yaml-not-used).
+Note: currently `name`, `model`, `base_url`, and `api_key` are used by the runner. Extra fields are preserved in config validation but ignored during execution.

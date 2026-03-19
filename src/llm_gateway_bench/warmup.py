@@ -1,20 +1,18 @@
-"""Warmup checker for llm-gateway-bench.
+"""Warmup checker for llm-gateway-bench."""
 
-Sends a single lightweight request to each configured provider to:
-- Verify reachability before a full benchmark run
-- Warm up connection pools and server-side caches
-- Detect misconfigured API keys or endpoints early
-"""
 from __future__ import annotations
 
 import asyncio
 import time
-from typing import Any
+from typing import Any, Optional
 
 import httpx
 from rich import box
 from rich.console import Console
 from rich.table import Table
+
+from .providers import PROVIDER_DEFAULTS
+from .validators import validate_api_key, validate_base_url, validate_provider_name
 
 console = Console()
 
@@ -29,58 +27,72 @@ class WarmupChecker:
         self.cfg = cfg
         self.timeout = timeout
 
-    async def _check_provider(self, provider: Any) -> dict[str, Any]:
-        """Send a single chat completion request to *provider*.
+    @staticmethod
+    def _value(obj: Any, key: str, default: Any = None) -> Any:
+        if isinstance(obj, dict):
+            return obj.get(key, default)
+        return getattr(obj, key, default)
 
-        Returns a status dict with keys: name, ok, latency_ms, error.
-        """
+    async def _check_provider(self, provider: Any) -> dict[str, Any]:
+        """Send a single non-streaming chat request to a provider."""
+
         start = time.perf_counter()
-        error: str | None = None
+        error: Optional[str] = None
         ok = False
+        provider_name = self._value(provider, "name", "custom")
 
         try:
+            normalized_name = validate_provider_name(provider_name)
+            defaults = PROVIDER_DEFAULTS.get(normalized_name, {})
+            base_url = validate_base_url(
+                self._value(provider, "base_url") or defaults.get("base_url")
+            )
+            if not base_url:
+                raise ValueError("Provider base_url is required for warmup checks")
+
+            api_key = validate_api_key(
+                normalized_name,
+                self._value(provider, "api_key"),
+                env_fallback=True,
+            )
+
             headers = {"Content-Type": "application/json"}
-            api_key = getattr(provider, "api_key", None)
             if api_key:
                 headers["Authorization"] = f"Bearer {api_key}"
 
             payload = {
-                "model": provider.model,
+                "model": self._value(provider, "model"),
                 "messages": [{"role": "user", "content": _WARMUP_PROMPT}],
                 "max_tokens": _WARMUP_MAX_TOKENS,
                 "stream": False,
             }
-
-            url = provider.base_url.rstrip("/") + "/chat/completions"
+            url = base_url.rstrip("/") + "/chat/completions"
 
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 resp = await client.post(url, json=payload, headers=headers)
                 resp.raise_for_status()
                 ok = True
-
         except httpx.TimeoutException:
             error = f"Timeout after {self.timeout:.0f}s"
         except httpx.HTTPStatusError as exc:
             error = f"HTTP {exc.response.status_code}"
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # pragma: no cover - network errors vary
             error = str(exc)[:80]
 
         elapsed_ms = (time.perf_counter() - start) * 1000
         return {
-            "name": provider.name,
+            "name": provider_name,
             "ok": ok,
             "latency_ms": elapsed_ms,
             "error": error,
         }
 
     async def run_warmup(self) -> bool:
-        """Run warmup checks for all providers concurrently.
+        """Run warmup checks for all providers concurrently."""
 
-        Prints a summary table and returns True if all providers are reachable.
-        """
-        providers = self.cfg.providers
+        providers = self._value(self.cfg, "providers", [])
         if not providers:
-            console.print("[yellow]No providers configured — skipping warmup.[/yellow]")
+            console.print("[yellow]No providers configured; skipping warmup.[/yellow]")
             return True
 
         console.print(
@@ -103,18 +115,21 @@ class WarmupChecker:
         table.add_column("Note", style="dim")
 
         all_ok = True
-        for r in results:
-            if r["ok"]:
+        for result in results:
+            if result["ok"]:
                 status = "[bold green]OK[/bold green]"
-                latency = f"{r['latency_ms']:.0f} ms"
                 note = ""
             else:
                 status = "[bold red]FAIL[/bold red]"
-                latency = f"{r['latency_ms']:.0f} ms"
-                note = r["error"] or "unknown error"
+                note = result["error"] or "unknown error"
                 all_ok = False
 
-            table.add_row(r["name"], status, latency, note)
+            table.add_row(
+                result["name"],
+                status,
+                f"{result['latency_ms']:.0f} ms",
+                note,
+            )
 
         console.print(table)
 

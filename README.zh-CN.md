@@ -5,14 +5,14 @@
 > 用于 LLM API 网关的 CLI 基准测试工具 —— 测量延迟、首 token 延迟（TTFT）与吞吐量。
 
 <p align="center">
-  <a href="https://github.com/YOUR_USERNAME/llm-gateway-bench/actions/workflows/ci.yml">
-    <img src="https://github.com/YOUR_USERNAME/llm-gateway-bench/actions/workflows/ci.yml/badge.svg" alt="CI">
+  <a href="https://github.com/mnbplus/llm-gateway-bench/actions/workflows/ci.yml">
+    <img src="https://github.com/mnbplus/llm-gateway-bench/actions/workflows/ci.yml/badge.svg" alt="CI">
   </a>
   <a href="https://pypi.org/project/llm-gateway-bench/">
     <img src="https://img.shields.io/pypi/v/llm-gateway-bench" alt="PyPI">
   </a>
-  <a href="https://codecov.io/gh/YOUR_USERNAME/llm-gateway-bench">
-    <img src="https://img.shields.io/codecov/c/github/YOUR_USERNAME/llm-gateway-bench" alt="Coverage">
+  <a href="https://codecov.io/gh/mnbplus/llm-gateway-bench">
+    <img src="https://img.shields.io/codecov/c/github/mnbplus/llm-gateway-bench" alt="Coverage">
   </a>
   <a href="https://pypi.org/project/llm-gateway-bench/">
     <img src="https://img.shields.io/pypi/pyversions/llm-gateway-bench" alt="Python Versions">
@@ -26,7 +26,7 @@
 
 **文档**：`docs/` → `docs/configuration.md` • `docs/providers.md`
 
-**源码**：https://github.com/YOUR_USERNAME/llm-gateway-bench
+**源码**：https://github.com/mnbplus/llm-gateway-bench
 
 ---
 
@@ -63,7 +63,7 @@ lgb compare bench.yaml --output report.md
 pip install llm-gateway-bench
 
 # 从源码安装
-git clone https://github.com/YOUR_USERNAME/llm-gateway-bench
+git clone https://github.com/mnbplus/llm-gateway-bench
 cd llm-gateway-bench
 pip install -e .
 ```

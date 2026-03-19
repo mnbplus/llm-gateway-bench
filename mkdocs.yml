@@ -1,6 +1,6 @@
 site_name: llm-gateway-bench
-site_description: Benchmark LLM API gateways — latency, TTFT, throughput.
-repo_url: https://github.com/YOUR_USERNAME/llm-gateway-bench
+site_description: Benchmark LLM API gateways - latency, TTFT, throughput.
+repo_url: https://github.com/mnbplus/llm-gateway-bench
 repo_name: llm-gateway-bench
 edit_uri: edit/main/docs/
 
@@ -34,6 +34,8 @@ nav:
       - FAQ: faq.md
       - Contributing: contributing.md
 
+exclude_docs: assets/README.md
+
 markdown_extensions:
   - admonition
   - attr_list
@@ -49,12 +51,13 @@ markdown_extensions:
 plugins:
   - search
   - git-revision-date-localized:
-      enable_creation_date: true
+      fallback_to_build_date: true
+      strict: false
 
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/YOUR_USERNAME/llm-gateway-bench
+      link: https://github.com/mnbplus/llm-gateway-bench
 
 copyright: |
   Copyright &copy; 2026

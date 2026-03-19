@@ -1,15 +1,4 @@
-"""Core benchmarking logic.
-
-The current implementation targets OpenAI-compatible endpoints via the OpenAI Python SDK.
-It sends **streaming** chat completion requests and derives:
-
-- TTFT (time-to-first-token)
-- Total latency
-- Approximate throughput (completion tokens / wall time)
-
-Note: this module intentionally keeps provider logic minimal. Most providers are
-supported via OpenAI-compatible gateways (`base_url`).
-"""
+"""Core benchmarking logic for llm-gateway-bench."""
 
 from __future__ import annotations
 
@@ -17,12 +6,12 @@ import asyncio
 import os
 import statistics
 import time
-from typing import List, Optional, TypedDict
+from typing import Any, Callable, List, Optional, Sequence, TypedDict
 
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
 
-from .models import BenchResult
+from .models import BenchConfig, BenchResult, ProviderConfig
 from .providers import PROVIDER_DEFAULTS
 from .validators import validate_api_key, validate_base_url, validate_provider_name
 
@@ -36,6 +25,24 @@ class _RequestResult(TypedDict):
     error: Optional[str]
 
 
+def _provider_api_key(provider: str, explicit_api_key: Optional[str]) -> str:
+    """Resolve the effective API key for a provider."""
+
+    provider = validate_provider_name(provider)
+    defaults = PROVIDER_DEFAULTS.get(provider, {})
+    env_key = defaults.get("env_key", "")
+    fallback = os.getenv(env_key, None) if env_key else None
+    return validate_api_key(provider, explicit_api_key or fallback, env_fallback=True)
+
+
+def _provider_base_url(provider: str, base_url: Optional[str]) -> Optional[str]:
+    """Resolve the effective base URL for a provider."""
+
+    provider = validate_provider_name(provider)
+    defaults = PROVIDER_DEFAULTS.get(provider, {})
+    return validate_base_url(base_url or defaults.get("base_url"))
+
+
 async def _single_request_openai(
     client: AsyncOpenAI,
     model: str,
@@ -43,24 +50,27 @@ async def _single_request_openai(
     timeout: int,
 ) -> _RequestResult:
     """Run a single streaming request and measure TTFT + total latency."""
+
     t_start = time.perf_counter()
     ttft_ms: Optional[float] = None
     total_tokens = 0
 
-    try:
-        async with asyncio.timeout(timeout):
-            stream = await client.chat.completions.create(
-                model=model,
-                messages=[{"role": "user", "content": prompt}],
-                stream=True,
-                stream_options={"include_usage": True},
-            )
-            async for chunk in stream:
-                if ttft_ms is None and chunk.choices and chunk.choices[0].delta.content:
-                    ttft_ms = (time.perf_counter() - t_start) * 1000
-                if chunk.usage:
-                    total_tokens = chunk.usage.completion_tokens or 0
+    async def _collect_stream() -> None:
+        nonlocal ttft_ms, total_tokens
+        stream = await client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            stream=True,
+            stream_options={"include_usage": True},
+        )
+        async for chunk in stream:
+            if ttft_ms is None and chunk.choices and chunk.choices[0].delta.content:
+                ttft_ms = (time.perf_counter() - t_start) * 1000
+            if chunk.usage:
+                total_tokens = chunk.usage.completion_tokens or 0
 
+    try:
+        await asyncio.wait_for(_collect_stream(), timeout=timeout)
         total_ms = (time.perf_counter() - t_start) * 1000
         return {
             "ttft": ttft_ms or total_ms,
@@ -79,12 +89,9 @@ async def _run_concurrent(
     n_requests: int,
     concurrency: int,
     timeout: int,
-    on_progress: Optional[callable] = None,
+    on_progress: Optional[Callable[[], None]] = None,
 ) -> List[_RequestResult]:
-    """Run ``n_requests`` requests with bounded concurrency.
-
-    If ``on_progress`` is provided, it will be called once per request completion.
-    """
+    """Run ``n_requests`` requests with bounded concurrency."""
 
     semaphore = asyncio.Semaphore(concurrency)
 
@@ -112,38 +119,17 @@ def run_benchmark(
     n_requests: int = 20,
     concurrency: int = 3,
     base_url: Optional[str] = None,
+    api_key: Optional[str] = None,
     timeout: int = 30,
-    on_progress: Optional[callable] = None,
+    on_progress: Optional[Callable[[], None]] = None,
 ) -> BenchResult:
-    """Run a benchmark for a single provider/model.
-
-    Args:
-        provider: Provider name (e.g. ``openai``).
-        model: Model identifier.
-        prompt: Prompt text used for the run.
-        n_requests: Number of requests to send.
-        concurrency: Maximum concurrent requests.
-        base_url: Optional base URL for OpenAI-compatible endpoints.
-        timeout: Per-request timeout in seconds.
-        on_progress: Optional callback invoked once per completed request.
-
-    Returns:
-        A :class:`~llm_gateway_bench.models.BenchResult` with summary statistics.
-    """
+    """Run a benchmark for a single provider/model."""
 
     provider = validate_provider_name(provider)
+    effective_base_url = _provider_base_url(provider, base_url)
+    effective_api_key = _provider_api_key(provider, api_key)
 
-    defaults = PROVIDER_DEFAULTS.get(provider, {})
-    effective_base_url = validate_base_url(
-        base_url or defaults.get("base_url", "https://api.openai.com/v1")
-    )
-
-    env_key = defaults.get("env_key", "OPENAI_API_KEY")
-    # user may rely on env var
-    api_key = validate_api_key(provider, os.getenv(env_key, None))
-
-    client = AsyncOpenAI(base_url=effective_base_url, api_key=api_key)
-
+    client = AsyncOpenAI(base_url=effective_base_url, api_key=effective_api_key)
     raw = asyncio.run(
         _run_concurrent(
             client,
@@ -191,29 +177,75 @@ def run_benchmark(
     )
 
 
-def compare_providers(cfg: dict, *, on_progress: Optional[callable] = None) -> List[BenchResult]:
-    """Run benchmarks for all providers defined in the config.
+def run_provider_config(
+    provider: ProviderConfig,
+    *,
+    prompt: str,
+    requests: int,
+    concurrency: int,
+    timeout: int,
+    on_progress: Optional[Callable[[], None]] = None,
+) -> BenchResult:
+    """Run a benchmark using a provider entry from BenchConfig."""
 
-    If ``on_progress`` is given, it will be called once per request completion across all providers.
-    """
+    return run_benchmark(
+        provider=provider.name,
+        model=provider.model,
+        prompt=prompt,
+        n_requests=requests,
+        concurrency=concurrency,
+        base_url=provider.base_url,
+        api_key=provider.api_key,
+        timeout=timeout,
+        on_progress=on_progress,
+    )
+
+
+def compare_providers(
+    cfg: Any,
+    *,
+    on_progress: Optional[Callable[[], None]] = None,
+) -> List[BenchResult]:
+    """Run benchmarks for all providers defined in the config."""
+
+    if isinstance(cfg, BenchConfig):
+        prompt = cfg.first_prompt()
+        providers: Sequence[ProviderConfig] = cfg.providers
+        requests = cfg.settings.requests
+        concurrency = cfg.settings.concurrency
+        timeout = cfg.settings.timeout
+    else:
+        prompt = (cfg.get("prompts") or ["Say hello."])[0]
+        providers = [ProviderConfig.model_validate(p) for p in cfg.get("providers", [])]
+        settings = cfg.get("settings", {})
+        requests = settings.get("requests", 20)
+        concurrency = settings.get("concurrency", 3)
+        timeout = settings.get("timeout", 30)
 
     results: List[BenchResult] = []
-    prompts = cfg.get("prompts", ["Say hello."])
-    prompt = prompts[0] if prompts else "Say hello."
-    settings = cfg.get("settings", {})
-
-    for provider_cfg in cfg.get("providers", []):
+    for provider in providers:
         results.append(
-            run_benchmark(
-                provider=provider_cfg["name"],
-                model=provider_cfg["model"],
+            run_provider_config(
+                provider,
                 prompt=prompt,
-                n_requests=settings.get("requests", 20),
-                concurrency=settings.get("concurrency", 3),
-                base_url=provider_cfg.get("base_url"),
-                timeout=settings.get("timeout", 30),
+                requests=requests,
+                concurrency=concurrency,
+                timeout=timeout,
                 on_progress=on_progress,
             )
         )
-
     return results
+
+
+class BenchmarkRunner:
+    """Compatibility wrapper around the current sync benchmarking API."""
+
+    def __init__(self, cfg: Any) -> None:
+        self.cfg = cfg
+
+    def run_all(
+        self,
+        *,
+        on_progress: Optional[Callable[[], None]] = None,
+    ) -> List[BenchResult]:
+        return compare_providers(self.cfg, on_progress=on_progress)

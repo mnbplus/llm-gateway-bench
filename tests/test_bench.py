@@ -4,7 +4,13 @@ import json
 import os
 import tempfile
 
-from llm_gateway_bench.models import BenchResult
+from llm_gateway_bench.bench import compare_providers
+from llm_gateway_bench.models import (
+    BenchConfig,
+    BenchResult,
+    ProviderConfig,
+    SettingsConfig,
+)
 from llm_gateway_bench.report import generate_report
 
 
@@ -56,3 +62,46 @@ def test_report_markdown():
         assert "gpt-4o-mini" in content
     finally:
         os.unlink(path)
+
+
+def test_compare_providers_uses_provider_api_key(monkeypatch):
+    captured = {}
+
+    def fake_run_benchmark(
+        provider,
+        model,
+        prompt,
+        n_requests=20,
+        concurrency=3,
+        base_url=None,
+        api_key=None,
+        timeout=30,
+        on_progress=None,
+    ):
+        captured["provider"] = provider
+        captured["model"] = model
+        captured["prompt"] = prompt
+        captured["api_key"] = api_key
+        return make_result(provider=provider, model=model)
+
+    monkeypatch.setattr("llm_gateway_bench.bench.run_benchmark", fake_run_benchmark)
+
+    cfg = BenchConfig(
+        prompts=["Ping"],
+        providers=[
+            ProviderConfig(
+                name="openai",
+                model="gpt-4o-mini",
+                api_key="yaml-key",
+            )
+        ],
+        settings=SettingsConfig(requests=2, concurrency=1, timeout=5),
+    )
+
+    results = compare_providers(cfg)
+
+    assert len(results) == 1
+    assert captured["provider"] == "openai"
+    assert captured["model"] == "gpt-4o-mini"
+    assert captured["prompt"] == "Ping"
+    assert captured["api_key"] == "yaml-key"

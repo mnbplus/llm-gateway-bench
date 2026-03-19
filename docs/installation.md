@@ -75,7 +75,7 @@ python -m pip install llm-gateway-bench
 ## Install from source
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/llm-gateway-bench
+git clone https://github.com/mnbplus/llm-gateway-bench
 cd llm-gateway-bench
 
 # Editable install
@@ -106,5 +106,6 @@ See [Providers](providers.md) for the full list of keys.
 
 - If `lgb` is not found after install, ensure your Python scripts directory is on `PATH`.
 - On Windows, prefer `pipx` or `uv tool` to avoid PATH confusion.
+- If `mkdocs build` fails with GitPython and you use a portable Git install, set `GIT_PYTHON_GIT_EXECUTABLE` to the full path of `git.exe`.
 
 See also: [FAQ](faq.md)

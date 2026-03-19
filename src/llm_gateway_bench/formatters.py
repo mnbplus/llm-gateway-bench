@@ -6,7 +6,6 @@ import io
 import json
 from typing import Any, List, Optional, Sequence, Tuple
 
-from rich import box
 from rich.console import Console
 from rich.progress import (
     BarColumn,
@@ -266,67 +265,11 @@ class ResultFormatter:
     """Render benchmark results in multiple formats."""
 
     def print_table(self, results: List[Any]) -> None:
-        """Print a Rich table with best/worst latency highlighted."""
+        """Print a Rich table with current BenchResult fields."""
         if not results:
             console.print("[yellow]No results to display.[/yellow]")
             return
-
-        avg_lats = [r.avg_latency for r in results]
-        p50s = [r.p50_latency for r in results]
-        p95s = [r.p95_latency for r in results]
-        tpss = [r.avg_tokens_per_second for r in results]
-        succs = [r.success_rate for r in results]
-
-        avg_best, avg_worst = _best_worst(avg_lats, higher_is_better=False)
-        p50_best, p50_worst = _best_worst(p50s, higher_is_better=False)
-        p95_best, p95_worst = _best_worst(p95s, higher_is_better=False)
-        tps_best, tps_worst = _best_worst(tpss, higher_is_better=True)
-        succ_best, succ_worst = _best_worst(succs, higher_is_better=True)
-
-        table = Table(
-            title="[bold]Benchmark Results[/bold]",
-            box=box.ROUNDED,
-            show_header=True,
-            header_style="bold cyan",
-            border_style="bright_black",
-        )
-        table.add_column("Provider", style="bold", min_width=12)
-        table.add_column("Model", style="dim")
-        table.add_column("Avg Latency", justify="right")
-        table.add_column("P50", justify="right")
-        table.add_column("P95", justify="right")
-        table.add_column("Tokens/s", justify="right")
-        table.add_column("Success", justify="right")
-        table.add_column("Errors", justify="right")
-
-        for r in results:
-            table.add_row(
-                r.provider,
-                r.model,
-                _style_extrema(
-                    f"{r.avg_latency:.2f}s", r.avg_latency,
-                    avg_best, avg_worst, better_when_higher=False,
-                ),
-                _style_extrema(
-                    f"{r.p50_latency:.2f}s", r.p50_latency,
-                    p50_best, p50_worst, better_when_higher=False,
-                ),
-                _style_extrema(
-                    f"{r.p95_latency:.2f}s", r.p95_latency,
-                    p95_best, p95_worst, better_when_higher=False,
-                ),
-                _style_extrema(
-                    f"{r.avg_tokens_per_second:.1f}", r.avg_tokens_per_second,
-                    tps_best, tps_worst, better_when_higher=True,
-                ),
-                _style_extrema(
-                    f"{r.success_rate:.0%}", r.success_rate,
-                    succ_best, succ_worst, better_when_higher=True,
-                ),
-                str(r.error_count),
-            )
-
-        console.print(table)
+        console.print(results_table(results))
 
     def print_latency_histogram(
         self, results: List[Any], *, bins: int = 8, bar_width: int = 40
@@ -341,41 +284,7 @@ class ResultFormatter:
 
             if not raw:
                 continue
-
-            data = _histogram_bins(raw, bins)
-            max_count = max(c for _, _, c in data) or 1
-
-            table = Table(
-                title=f"Latency Distribution \u2014 {r.provider}",
-                box=box.SIMPLE,
-                show_header=True,
-                header_style="dim",
-                border_style="bright_black",
-                show_edge=False,
-            )
-            table.add_column("Bucket (s)", style="dim", min_width=16, no_wrap=True)
-            table.add_column("n", justify="right", width=5)
-            table.add_column("Bar", min_width=bar_width)
-
-            for lo, hi, count in data:
-                frac = count / max_count
-                filled = max(1 if count else 0, int(frac * bar_width))
-                bar_str = "\u2588" * filled
-
-                if frac >= 0.75:
-                    bar_style = "bold red"
-                elif frac >= 0.4:
-                    bar_style = "yellow"
-                else:
-                    bar_style = "green"
-
-                table.add_row(
-                    f"{lo:.3f}\u2013{hi:.3f}",
-                    str(count),
-                    Text(bar_str, style=bar_style),
-                )
-
-            console.print(table)
+            console.print(latency_histogram_table(raw, bins=bins, width=bar_width))
 
     def print_json(self, results: List[Any]) -> None:
         """Print results as formatted JSON."""
@@ -387,18 +296,20 @@ class ResultFormatter:
         buf = io.StringIO()
         writer = csv.writer(buf)
         writer.writerow([
-            "provider", "model", "avg_latency", "p50", "p95",
-            "tokens_per_second", "success_rate", "errors",
+            "provider", "model", "ttft_ms", "total_ms", "p50_ms", "p95_ms",
+            "tokens_per_sec", "success_rate", "errors", "total_tokens",
         ])
         for r in results:
             writer.writerow([
                 r.provider,
                 r.model,
-                r.avg_latency,
-                r.p50_latency,
-                r.p95_latency,
-                r.avg_tokens_per_second,
+                r.ttft_ms,
+                r.total_ms,
+                r.p50_ms,
+                r.p95_ms,
+                r.tokens_per_sec,
                 r.success_rate,
-                r.error_count,
+                r.errors,
+                r.total_tokens,
             ])
         print(buf.getvalue(), end="")

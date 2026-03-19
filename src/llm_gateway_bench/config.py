@@ -4,23 +4,30 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any, Dict
 
 import yaml
+from pydantic import ValidationError
 
 from .exceptions import ConfigError
 from .models import BenchConfig
 
 
-def load_config(path: str) -> Dict[str, Any]:
-    """Load and validate a bench.yaml config file.
+def _expand_provider_env_vars(config: BenchConfig) -> None:
+    """Resolve ${ENV_NAME} placeholders in provider api_key fields."""
 
-    Args:
-        path: Path to the YAML configuration file.
+    for provider in config.providers:
+        if (
+            provider.api_key
+            and provider.api_key.startswith("${")
+            and provider.api_key.endswith("}")
+        ):
+            env_name = provider.api_key[2:-1]
+            provider.api_key = os.getenv(env_name, "")
 
-    Returns:
-        The validated configuration as a plain dictionary.
-    """
+
+def load_config(path: str) -> BenchConfig:
+    """Load and validate a benchmark YAML config file."""
+
     p = Path(path)
     if not p.exists():
         raise ConfigError(f"Config file not found: {path}")
@@ -34,12 +41,10 @@ def load_config(path: str) -> Dict[str, Any]:
     if not isinstance(raw, dict):
         raise ConfigError("Config root must be a mapping.")
 
-    config = BenchConfig.model_validate(raw)
+    try:
+        config = BenchConfig.model_validate(raw)
+    except ValidationError as exc:
+        raise ConfigError(str(exc)) from exc
 
-    # Expand env vars in api_key fields
-    for provider in config.providers:
-        if provider.api_key and provider.api_key.startswith("${") and provider.api_key.endswith("}"):
-            env_name = provider.api_key[2:-1]
-            provider.api_key = os.getenv(env_name, "")
-
-    return config.model_dump()
+    _expand_provider_env_vars(config)
+    return config

@@ -26,7 +26,7 @@ Optional but recommended:
 ### Clone
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/llm-gateway-bench
+git clone https://github.com/mnbplus/llm-gateway-bench
 cd llm-gateway-bench
 ```
 
@@ -104,7 +104,7 @@ Open <http://127.0.0.1:8000>.
 
 ## Adding or improving providers
 
-Provider defaults live in `src/llm_gateway_bench/bench.py` (`PROVIDER_DEFAULTS`).
+Provider defaults live in `src/llm_gateway_bench/providers.py` (`PROVIDER_DEFAULTS`).
 
 Before adding a provider:
 

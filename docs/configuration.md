@@ -105,12 +105,13 @@ The **current runner** ignores these extra keys.
 
 ### Important: where the API key is read from
 
-Even though YAML supports `api_key`, the current benchmark runner reads the actual key from **environment variables** based on provider name:
+The runner resolves API keys in this order:
 
-- Provider defaults mapping lives in `src/llm_gateway_bench/bench.py` (`PROVIDER_DEFAULTS`).
-- The loader (`src/llm_gateway_bench/config.py`) expands `${ENV_NAME}` values, but the runner does not currently consume `provider_cfg["api_key"]`.
+- provider-level `api_key` from YAML
+- provider-specific environment variable from `PROVIDER_DEFAULTS`
+- dummy key for local providers that do not require authentication
 
-If you want YAML keys to be used directly, please open an issue or contribute a patch.
+This means `${ENV_NAME}` values in YAML are expanded by the loader and then used directly by the runner.
 
 ---
 

@@ -21,3 +21,4 @@ if _src.exists():
     sys.path.insert(0, str(_src))
 
 __path__ = extend_path(__path__, __name__)
+__version__ = "0.2.0"

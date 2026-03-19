@@ -8,8 +8,7 @@ We support the latest minor release of the project. Security fixes are applied o
 
 Please report security issues **privately**.
 
-- Open a private security advisory on GitHub: https://github.com/YOUR_USERNAME/llm-gateway-bench/security/advisories
-- Or email: security@example.com
+- Open a private security advisory on GitHub: https://github.com/mnbplus/llm-gateway-bench/security/advisories
 
 We will acknowledge reports within 7 days and provide a remediation timeline as soon as possible.
 

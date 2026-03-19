@@ -1,16 +1,4 @@
-"""History storage and comparison for llm-gateway-bench.
-
-We store each run as a JSONL line in ``~/.lgb/history.jsonl``.
-Each record is a lightweight dictionary including:
-- run_id (auto)
-- timestamp
-- results[]
-- meta (optional)
-
-The CLI offers:
-- `lgb history` to list runs
-- `lgb history --compare RUN1 RUN2` to compare two stored runs
-"""
+"""History storage and comparison for llm-gateway-bench."""
 
 from __future__ import annotations
 
@@ -117,3 +105,43 @@ def get_run(run_id: str) -> HistoryRun:
 
 def compare_runs(a_id: str, b_id: str) -> Tuple[HistoryRun, HistoryRun]:
     return get_run(a_id), get_run(b_id)
+
+
+class HistoryManager:
+    """Small compatibility wrapper used by older CLI code."""
+
+    @property
+    def history_dir(self) -> Path:
+        return history_dir()
+
+    def save(
+        self,
+        results: Sequence[BenchResult],
+        cfg: Optional[Any] = None,
+        *,
+        meta: Optional[Dict[str, Any]] = None,
+    ) -> Path:
+        payload = dict(meta or {})
+        if cfg is not None:
+            payload.setdefault("config", getattr(cfg, "model_dump", lambda: cfg)())
+        append_run(results, meta=payload)
+        return history_path()
+
+    def list(self, limit: int = 20) -> List[Dict[str, Any]]:
+        return [
+            {
+                "id": run.run_id,
+                "timestamp": run.ts,
+                "providers": len(run.results),
+            }
+            for run in list_runs(limit=limit)
+        ]
+
+    def load(self, run_id: str) -> Dict[str, Any]:
+        run = get_run(run_id)
+        return {
+            "run_id": run.run_id,
+            "ts": run.ts,
+            "meta": run.meta,
+            "results": serialize_results(run.results),
+        }
