@@ -8,4 +8,6 @@ This directory stores screenshots and images used by the documentation.
 - `quickstart-compare-output.png`
 - `quickstart-report.png`
 
+Use `social-preview.png` in GitHub repository settings under `General -> Social preview`.
+
 You can replace these placeholders with real screenshots.
