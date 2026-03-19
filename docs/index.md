@@ -1,6 +1,8 @@
+<div class="landing-page" markdown="1">
+
 # llm-gateway-bench
 
-![llm-gateway-bench hero](assets/github-hero.svg)
+![llm-gateway-bench hero](assets/github-hero.svg){ .hero-banner }
 
 *Benchmark real-world latency, TTFT, and throughput for LLM providers and OpenAI-compatible gateways.*
 
@@ -119,3 +121,5 @@ For the full matrix and provider-specific notes, see [Providers](providers.md).
 - Build reproducible suites: [Configuration](configuration.md)
 - Check provider gotchas: [Providers](providers.md)
 - Wire it into CI: [Advanced usage](advanced.md)
+
+</div>
