@@ -1,105 +1,101 @@
-# llm-gateway-bench 🚀
+# llm-gateway-bench
+
+> どの LLM プロバイダー、ゲートウェイ、デプロイ構成を採用するか決める前に、実トラフィックで性能を測るためのツールです。
 
 [English](README.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja.md)
-
-> LLM API ゲートウェイ向けの CLI ベンチマークツール — レイテンシ、TTFT（最初のトークンまでの時間）、スループットを測定します。
 
 <p align="center">
   <a href="https://github.com/mnbplus/llm-gateway-bench/actions/workflows/ci.yml">
     <img src="https://github.com/mnbplus/llm-gateway-bench/actions/workflows/ci.yml/badge.svg" alt="CI">
   </a>
-  <a href="https://pypi.org/project/llm-gateway-bench/">
-    <img src="https://img.shields.io/pypi/v/llm-gateway-bench" alt="PyPI">
+  <a href="https://github.com/mnbplus/llm-gateway-bench/releases">
+    <img src="https://img.shields.io/github/v/release/mnbplus/llm-gateway-bench?include_prereleases" alt="Release">
   </a>
-  <a href="https://codecov.io/gh/mnbplus/llm-gateway-bench">
-    <img src="https://img.shields.io/codecov/c/github/mnbplus/llm-gateway-bench" alt="Coverage">
+  <a href="https://github.com/mnbplus/llm-gateway-bench/stargazers">
+    <img src="https://img.shields.io/github/stars/mnbplus/llm-gateway-bench" alt="Stars">
   </a>
   <a href="https://pypi.org/project/llm-gateway-bench/">
-    <img src="https://img.shields.io/pypi/pyversions/llm-gateway-bench" alt="Python Versions">
+    <img src="https://img.shields.io/badge/python-3.9+-blue.svg" alt="Python">
   </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License">
   </a>
 </p>
 
----
+<p align="center">
+  <a href="https://mnbplus.github.io/llm-gateway-bench/">Docs</a> ·
+  <a href="docs/quickstart.md">Quickstart</a> ·
+  <a href="docs/providers.md">Providers</a> ·
+  <a href="https://pypi.org/project/llm-gateway-bench/">PyPI</a> ·
+  <a href="https://github.com/mnbplus/llm-gateway-bench/releases">Releases</a>
+</p>
 
-**ドキュメント**：`docs/` → `docs/configuration.md` • `docs/providers.md`
+<p align="center">
+  <img src="docs/images/screenshot.jpg" alt="llm-gateway-bench terminal demo" width="860" />
+</p>
 
-**ソースコード**：https://github.com/mnbplus/llm-gateway-bench
+## 何のためのツールか
 
----
+価格表やモデル紹介ページでは、実運用前に知りたいことは分かりません。
 
-## なぜ必要？
+- 同じ prompt 形状で最も TTFT が良いプロバイダーはどれか
+- 並列度を上げたときにスループットや tail latency がどう変わるか
+- 自前ゲートウェイは upstream API より速いのか遅いのか
+- モデル切替、リージョン変更、リリース後に性能が劣化していないか
 
-LLM API の提供元を選ぶのは簡単ではありません。価格表だけでは実測レイテンシや TTFT、高負荷時の劣化は見えません。`llm-gateway-bench` は **客観的かつ再現可能なベンチマーク** を提供し、判断材料を増やします。
+`llm-gateway-bench` は、こうした問いに答えるための再現可能な CLI ベンチマークを提供します。
 
-## 特徴
+## できること
 
-- ⚡ **TTFT**（Time To First Token）の測定
-- 📊 **スループット**（tokens/sec）計測
-- 🔄 **同時リクエスト** シミュレーション
-- 🌐 **マルチ Provider** 対応：OpenAI、Anthropic、Google Gemini、DeepSeek、Qwen、SiliconFlow、および OpenAI 互換 API
-- 📈 **レポート生成**（Markdown / JSON / CSV）
-- 🔧 **YAML 設定** によるカスタマイズ
-- 🏃 **CLI ファースト** 設計
+| 測定 | 比較 | 出力 |
+| --- | --- | --- |
+| TTFT、総レイテンシ、p50/p95、スループット、成功率 | プロバイダー、ゲートウェイ、リージョン、リリース、自前ホスト | Markdown、JSON、CSV、ローカル履歴 |
 
-## クイックスタート
+| 用途 | 対象例 |
+| --- | --- |
+| プロバイダー選定 | OpenAI、Anthropic、Gemini、Groq、DeepSeek、OpenRouter |
+| ゲートウェイ検証 | OpenAI-compatible relay / API gateway |
+| インフラ回帰検出 | リージョン変更、LB、モデル更新、自前推論基盤 |
+
+## 最短ルート
 
 ```bash
 pip install llm-gateway-bench
 
-# すぐに計測
-lgb run --provider openai --model gpt-5-mini --requests 20
+# 内蔵プロバイダー定義を確認
+lgb providers
 
-# 複数 Provider の比較
-lgb compare bench.yaml --output report.md
+# 単一 provider / model をすばやく計測
+lgb run --provider openai --model gpt-5-mini --requests 20 --concurrency 3 \
+  --prompt "Say hello in one sentence."
+
+# YAML で複数 provider を比較
+lgb compare example-bench.yaml --output report.md
 ```
 
-## インストール
+## コマンド構成
 
-```bash
-# PyPI から
-pip install llm-gateway-bench
+| コマンド | 目的 |
+| --- | --- |
+| `lgb run` | CLI 引数で単一 provider / model を計測 |
+| `lgb compare` | `bench.yaml` から複数 target を比較 |
+| `lgb warmup` | 本番計測前の疎通確認 |
+| `lgb history` | 保存済みランの一覧と比較 |
+| `lgb providers` | デフォルトの base URL と環境変数名を表示 |
 
-# ソースから
-git clone https://github.com/mnbplus/llm-gateway-bench
-cd llm-gateway-bench
-pip install -e .
-```
-
-## 使い方
-
-### 単一 Provider のベンチマーク
-
-```bash
-lgb run \
-  --provider openai \
-  --model gpt-5.4 \
-  --requests 50 \
-  --concurrency 5 \
-  --prompt "量子計算を一文で説明してください。"
-```
-
-### 複数 Provider の比較
+## 設定例
 
 ```yaml
-# bench.yaml
 prompts:
-  - "海について俳句を書いてください。"
-  - "2+2 は？数字だけで答えてください。"
+  - "Write a haiku about the ocean."
 
 providers:
   - name: openai
     model: gpt-5-mini
     api_key: ${OPENAI_API_KEY}
 
-  - name: anthropic
-    model: claude-sonnet-4-5
-    api_key: ${ANTHROPIC_API_KEY}
-
   - name: gemini
-    model: gemini-2.5-pro
+    model: gemini-2.5-flash
     base_url: https://generativelanguage.googleapis.com/v1beta/openai/
     api_key: ${GEMINI_API_KEY}
 
@@ -108,73 +104,69 @@ providers:
     base_url: https://api.deepseek.com/v1
     api_key: ${DEEPSEEK_API_KEY}
 
-  - name: siliconflow
-    model: deepseek-v3
-    base_url: https://api.siliconflow.cn/v1
-    api_key: ${SILICONFLOW_API_KEY}
-
-  - name: dashscope
-    model: qwen3-plus
-    base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
-    api_key: ${DASHSCOPE_API_KEY}
-
 settings:
-  requests: 30
+  requests: 20
   concurrency: 3
   timeout: 30
 ```
 
 ```bash
-lgb compare bench.yaml --output report.md
+lgb compare bench.yaml --output report.md --save
 ```
 
-### 出力例
+## よくあるワークフロー
 
-```
+1. まず `lgb providers` で既定値と環境変数名を確認する
+2. 疎通だけ見たいなら `lgb warmup bench.yaml` を実行する
+3. 単一 target の調整には `lgb run` を使う
+4. 再現可能な横比較には `lgb compare` を使う
+5. 回帰を見るなら `lgb history --compare <id1> <id2>` を使う
+
+## ベンチマーク可能な対象
+
+- 主要 API: OpenAI、Anthropic、Google Gemini
+- コスト/性能系: DeepSeek、Groq、Together、Fireworks、OpenRouter、Mistral、Cohere、Perplexity
+- 中国系・地域系: DashScope、SiliconFlow、Zhipu、Moonshot、Baidu、01AI、MiniMax
+- ローカル/自前ホスト: Ollama、vLLM、LM Studio
+- 任意の OpenAI-compatible endpoint: `--base-url` または YAML `base_url`
+
+詳細は [docs/providers.md](docs/providers.md) を参照してください。
+
+## 出力例
+
+```text
 ┌─────────────────┬──────────────────────┬──────────┬────────────┬──────────────┐
 │ Provider        │ Model                │ TTFT (ms)│ Total (ms) │ Tokens/sec   │
 ├─────────────────┼──────────────────────┼──────────┼────────────┼──────────────┤
-│ openai          │ gpt-5-mini           │  312     │  1840      │  68.2        │
-│ anthropic       │ claude-sonnet-4-5    │  428     │  2100      │  54.1        │
-│ deepseek        │ deepseek-v3          │  890     │  3200      │  42.3        │
-│ siliconflow     │ deepseek-v3          │  654     │  2800      │  48.7        │
+│ openai          │ gpt-5-mini           │  198     │  1240      │  94.5        │
+│ anthropic       │ claude-haiku-4       │  312     │  1680      │  76.2        │
+│ gemini          │ gemini-2.5-flash     │  280     │  1520      │  82.1        │
+│ deepseek        │ deepseek-v3          │  720     │  2800      │  48.3        │
+│ groq            │ llama-3.3-70b        │   95     │   880      │ 210.5        │
 └─────────────────┴──────────────────────┴──────────┴────────────┴──────────────┘
 ```
 
-## 対応 Provider
+## スコープ
 
-| Provider | 状態 | 備考 |
-|----------|------|------|
-| OpenAI | ✅ | gpt-5.4, gpt-5-mini, o3, o4-mini |
-| Anthropic | ✅ | claude-opus-4, claude-sonnet-4-5, claude-haiku-4 |
-| Google Gemini | ✅ | gemini-2.5-pro, gemini-2.5-flash |
-| DeepSeek | ✅ | deepseek-v3, deepseek-r2 |
-| Qwen (Alibaba) | ✅ | qwen3-max, qwen3-plus |
-| SiliconFlow | ✅ | deepseek-v3, deepseek-r2 |
-| Any OpenAI-compat | ✅ | base_url でカスタム対応 |
+- 現在は OpenAI-compatible `chat.completions.create(stream=True)` に絞っています
+- provider 固有 API の専用ベンチマークは対象外です
+- 互換を謳う endpoint でも挙動差がある場合は、まず `warmup` で確認してください
 
-## 設定
+<p align="center">
+  <img src="docs/images/architecture.png" alt="llm-gateway-bench architecture" width="640" />
+</p>
 
-環境変数または `.env` で API キーを指定できます：
+## 次に読むもの
 
-```bash
-export OPENAI_API_KEY=sk-...
-export ANTHROPIC_API_KEY=sk-ant-...
-export DEEPSEEK_API_KEY=sk-...
-```
+- [Quickstart](docs/quickstart.md)
+- [Configuration](docs/configuration.md)
+- [Providers](docs/providers.md)
+- [Advanced usage](docs/advanced.md)
 
 ## コントリビュート
 
-PR 大歓迎！ [CONTRIBUTING.md](CONTRIBUTING.md) を参照してください。
+PR は歓迎です。[CONTRIBUTING.md](CONTRIBUTING.md) と [docs/contributing.md](docs/contributing.md) を参照してください。
 
 ## ライセンス
 
-MIT — [LICENSE](LICENSE)
-
----
-
-## リンク
-
-- ドキュメント：`docs/`（`docs/configuration.md` から）
-- Provider 説明：`docs/providers.md`
-- 変更履歴：`CHANGELOG.md`
+MIT。詳細は [LICENSE](LICENSE) を参照してください。
