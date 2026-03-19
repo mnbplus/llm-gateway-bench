@@ -1,8 +1,8 @@
-# llm-gateway-bench 🚀
+# llm-gateway-bench
+
+> Benchmark real LLM API behavior before you commit to a provider, gateway, or deployment.
 
 [English](README.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja.md)
-
-> A CLI benchmarking tool for LLM API gateways — measure latency, TTFT, and throughput across providers.
 
 <p align="center">
   <a href="https://github.com/mnbplus/llm-gateway-bench/actions/workflows/ci.yml">
@@ -22,93 +22,77 @@
   </a>
 </p>
 
----
-
-**Documentation**: [docs/](docs/) · [Configuration](docs/configuration.md) · [Providers](docs/providers.md) · [FAQ](docs/faq.md)
-
-**Source Code**: <https://github.com/mnbplus/llm-gateway-bench>
-
----
-
 <p align="center">
-  <img src="docs/images/screenshot.jpg" alt="llm-gateway-bench terminal demo" width="720" />
+  <a href="https://mnbplus.github.io/llm-gateway-bench/">Docs</a> ·
+  <a href="docs/quickstart.md">Quickstart</a> ·
+  <a href="docs/providers.md">Providers</a> ·
+  <a href="https://pypi.org/project/llm-gateway-bench/">PyPI</a> ·
+  <a href="https://github.com/mnbplus/llm-gateway-bench/releases">Releases</a>
 </p>
 
 <p align="center">
-  <img src="docs/images/architecture.png" alt="llm-gateway-bench architecture" width="600" />
+  <img src="docs/images/screenshot.jpg" alt="llm-gateway-bench terminal demo" width="860" />
 </p>
 
-## Why?
+## Why this exists
 
-Choosing an LLM API provider is hard. Pricing pages don't tell you about real-world latency, first-token delay, or how performance degrades under load. `llm-gateway-bench` gives you **objective, reproducible benchmark data** so you can make informed decisions.
+Pricing pages and model cards do not answer the questions that matter in production:
 
-## Features
+- Which provider has the best TTFT for my prompt shape?
+- What happens when I increase concurrency?
+- Is my gateway faster than the upstream provider?
+- Did latency regress after a deploy, region change, or model switch?
 
-- ⚡ **TTFT** (Time To First Token) measurement
-- 📊 **Throughput** (tokens/sec) benchmarking
-- 🔄 **Concurrent requests** simulation
-- 🌐 **Multi-provider** support: OpenAI, Anthropic, Google Gemini, DeepSeek, Qwen, SiliconFlow, Groq, Mistral, OpenRouter, Ollama, and more
-- 📈 **Report generation** in Markdown, JSON, and CSV
-- 🔧 **Custom payloads** via YAML config
-- 📜 **History** — save and compare past runs
-- 🏃 **CLI-first** design, no GUI required
+`llm-gateway-bench` gives you a repeatable CLI workflow for measuring those answers against real endpoints.
 
-## Quick Start
+## What you get
+
+| Measure | Compare | Export |
+| --- | --- | --- |
+| TTFT, total latency, p50/p95, throughput, success rate | Providers, gateways, regions, releases, self-hosted endpoints | Markdown, JSON, CSV, plus local run history |
+
+| Use it for | Typical target |
+| --- | --- |
+| Provider evaluation | OpenAI, Anthropic, Gemini, Groq, DeepSeek, OpenRouter |
+| Gateway validation | OpenAI-compatible relay layers and API gateways |
+| Infra regression checks | Regional changes, load balancers, model rollouts, self-hosted serving |
+
+## Fast path
 
 ```bash
 pip install llm-gateway-bench
 
-# Run a quick benchmark
-lgb run --provider openai --model gpt-5-mini --requests 20
-
-# Compare multiple providers
-lgb compare bench.yaml
-
-# List all supported providers
+# See built-in provider defaults
 lgb providers
+
+# Benchmark one provider/model quickly
+lgb run --provider openai --model gpt-5-mini --requests 20 --concurrency 3 \
+  --prompt "Say hello in one sentence."
+
+# Compare multiple providers from YAML
+lgb compare example-bench.yaml --output report.md
 ```
 
-## Installation
+## Command model
 
-```bash
-# From PyPI
-pip install llm-gateway-bench
+| Command | Purpose |
+| --- | --- |
+| `lgb run` | Run a single provider/model benchmark from CLI flags |
+| `lgb compare` | Run a multi-provider suite from `bench.yaml` |
+| `lgb warmup` | Verify provider reachability before a full run |
+| `lgb history` | List and compare saved historical runs |
+| `lgb providers` | Show built-in provider defaults and env var names |
 
-# From source
-git clone https://github.com/mnbplus/llm-gateway-bench
-cd llm-gateway-bench
-pip install -e .
-```
-
-## Usage
-
-### Single Provider Benchmark
-
-```bash
-lgb run \
-  --provider openai \
-  --model gpt-5-mini \
-  --requests 50 \
-  --concurrency 5 \
-  --prompt "Explain quantum computing in one sentence."
-```
-
-### Multi-Provider Comparison
+## Example config
 
 ```yaml
-# bench.yaml
 prompts:
   - "Write a haiku about the ocean."
-  - "What is 2+2? Reply with just the number."
 
 providers:
   - name: openai
     model: gpt-5-mini
     api_key: ${OPENAI_API_KEY}
-
-  - name: anthropic
-    model: claude-haiku-4
-    api_key: ${ANTHROPIC_API_KEY}
 
   - name: gemini
     model: gemini-2.5-flash
@@ -120,11 +104,6 @@ providers:
     base_url: https://api.deepseek.com/v1
     api_key: ${DEEPSEEK_API_KEY}
 
-  - name: groq
-    model: llama-3.3-70b-versatile
-    base_url: https://api.groq.com/openai/v1
-    api_key: ${GROQ_API_KEY}
-
 settings:
   requests: 20
   concurrency: 3
@@ -132,12 +111,30 @@ settings:
 ```
 
 ```bash
-lgb compare bench.yaml --output report.md
+lgb compare bench.yaml --output report.md --save
 ```
 
-### Sample Output
+## Typical workflow
 
-```
+1. Start with `lgb providers` to confirm defaults and environment variables.
+2. Run `lgb warmup bench.yaml` if you want a quick reachability check.
+3. Use `lgb run` while tuning a single provider or endpoint.
+4. Use `lgb compare` when you want a reproducible cross-provider report.
+5. Save runs and compare them later with `lgb history --compare <id1> <id2>`.
+
+## What you can benchmark
+
+- Frontier APIs: OpenAI, Anthropic, Google Gemini
+- Cost/performance providers: DeepSeek, Groq, Together, Fireworks, OpenRouter, Mistral, Cohere, Perplexity
+- China-focused providers: DashScope, SiliconFlow, Zhipu, Moonshot, Baidu, 01AI, MiniMax
+- Local and self-hosted endpoints: Ollama, vLLM, LM Studio
+- Any OpenAI-compatible endpoint via `--base-url` or YAML `base_url`
+
+The full provider matrix lives in [docs/providers.md](docs/providers.md).
+
+## Sample output
+
+```text
 ┌─────────────────┬──────────────────────┬──────────┬────────────┬──────────────┐
 │ Provider        │ Model                │ TTFT (ms)│ Total (ms) │ Tokens/sec   │
 ├─────────────────┼──────────────────────┼──────────┼────────────┼──────────────┤
@@ -145,45 +142,31 @@ lgb compare bench.yaml --output report.md
 │ anthropic       │ claude-haiku-4       │  312     │  1680      │  76.2        │
 │ gemini          │ gemini-2.5-flash     │  280     │  1520      │  82.1        │
 │ deepseek        │ deepseek-v3          │  720     │  2800      │  48.3        │
-│ groq            │ llama-3.3-70b        │  95      │  880       │  210.5       │
+│ groq            │ llama-3.3-70b        │   95     │   880      │ 210.5        │
 └─────────────────┴──────────────────────┴──────────┴────────────┴──────────────┘
 ```
 
-## Supported Providers (20+)
+## Scope
 
-| Provider | Latest Models | Notes |
-|----------|---------------|-------|
-| OpenAI | gpt-5.4, gpt-5-mini, o3, o4-mini | `OPENAI_API_KEY` |
-| Anthropic | claude-opus-4, claude-sonnet-4-5, claude-haiku-4 | `ANTHROPIC_API_KEY` |
-| Google Gemini | gemini-2.5-pro, gemini-2.5-flash | `GEMINI_API_KEY` |
-| DeepSeek | deepseek-v3, deepseek-r2 | `DEEPSEEK_API_KEY` |
-| Qwen (Alibaba) | qwen3-max, qwen3-plus, qwen3-turbo | `DASHSCOPE_API_KEY` |
-| SiliconFlow | DeepSeek-V3, Qwen3 series | `SILICONFLOW_API_KEY` |
-| Groq | llama-3.3-70b, llama-3.1-8b | `GROQ_API_KEY` |
-| Mistral | mistral-large, mistral-small | `MISTRAL_API_KEY` |
-| OpenRouter | 100+ models | `OPENROUTER_API_KEY` |
-| Ollama | llama3.2, qwen2.5, mistral... | Local, no key needed |
-| vLLM / LM Studio | Any HuggingFace model | Local, no key needed |
-| **Any OpenAI-compat** | Any model | Use `--base-url` |
+- The runner targets OpenAI-compatible `chat.completions.create(stream=True)` endpoints.
+- Native provider-specific benchmarking flows are out of scope for now.
+- If a provider claims compatibility but behaves differently, use `base_url` and validate with `warmup` first.
 
-## Configuration
+<p align="center">
+  <img src="docs/images/architecture.png" alt="llm-gateway-bench architecture" width="640" />
+</p>
 
-Set API keys via environment variables or `.env` file:
+## Next steps
 
-```bash
-export OPENAI_API_KEY=sk-...
-export ANTHROPIC_API_KEY=sk-ant-...
-export DEEPSEEK_API_KEY=sk-...
-```
+- Read the [Quickstart](docs/quickstart.md)
+- Configure a suite in [Configuration](docs/configuration.md)
+- Check provider-specific notes in [Providers](docs/providers.md)
+- Review advanced workflows in [Advanced usage](docs/advanced.md)
 
 ## Contributing
 
-PRs welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+PRs are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/contributing.md](docs/contributing.md).
 
 ## License
 
-MIT — see [LICENSE](LICENSE)
-
----
-
-**Links:** [Docs](docs/) · [Changelog](CHANGELOG.md) · [Issues](https://github.com/mnbplus/llm-gateway-bench/issues) · [Discussions](https://github.com/mnbplus/llm-gateway-bench/discussions)
+MIT. See [LICENSE](LICENSE).

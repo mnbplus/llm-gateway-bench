@@ -1,120 +1,88 @@
 # llm-gateway-bench
 
-*A CLI benchmarking tool for LLM API gateways — measure latency, TTFT, and throughput across providers.*
+*Benchmark real-world latency, TTFT, and throughput for LLM providers and OpenAI-compatible gateways.*
 
-`llm-gateway-bench` (CLI: `lgb`) helps you answer practical questions:
+`llm-gateway-bench` is a CLI-first tool for answering practical questions about model and gateway behavior:
 
-- Which provider/model has the best **TTFT** (Time To First Token) for my prompts?
-- How does performance degrade under **concurrency**?
-- Can I **reproduce** latency changes across time/regions/releases?
+- Which provider has the best TTFT for my prompt shape?
+- How does throughput change under concurrency?
+- Did a deploy, model switch, or region change regress performance?
+- Is my relay layer slower than the upstream API?
 
 ---
 
 ## Quick navigation
 
 - **Install**: [Installation](installation.md)
-- **5-minute tutorial**: [Quickstart](quickstart.md)
-- **Configure YAML benchmarks**: [Configuration](configuration.md)
-- **Provider setup & API keys**: [Providers](providers.md)
-- **Power user workflows**: [Advanced usage](advanced.md)
-- **Troubleshooting**: [FAQ](faq.md)
+- **Get running in minutes**: [Quickstart](quickstart.md)
+- **Build reproducible YAML suites**: [Configuration](configuration.md)
+- **See provider defaults and gotchas**: [Providers](providers.md)
+- **Advanced workflows and CI**: [Advanced usage](advanced.md)
+- **Questions and troubleshooting**: [FAQ](faq.md)
 - **Contribute**: [Contributing](contributing.md)
 
 ---
 
-## Why this tool
+## What it measures
 
-Pricing pages rarely tell you:
-
-- **Real-world latency** (average + tail)
-- **TTFT** (the “first token feels slow” problem)
-- **Throughput** (tokens/sec)
-- Behavior under **burst & concurrency**
-
-This project runs repeatable, streaming-based benchmarks against **OpenAI-compatible chat completion endpoints**.
+| Area | Metrics |
+| --- | --- |
+| Latency | TTFT, total latency, p50, p95 |
+| Throughput | Completion tokens per second |
+| Reliability | Success rate and error count |
+| Comparison | Provider, region, gateway, release, self-hosted target |
 
 ---
 
-## Features
+## Typical workflow
 
-- Streaming benchmark runner (OpenAI SDK) for OpenAI-compatible endpoints
-- Metrics: **TTFT**, **total latency**, **p50/p95**, **tokens/sec**, **success rate**
-- Run a single provider (`lgb run`) or compare many (`lgb compare bench.yaml`)
-- YAML-driven runs with environment-variable secrets (`${OPENAI_API_KEY}`)
-- Report generation to Markdown/JSON/CSV
-
----
-
-## Installation
-
-```bash
-pip install llm-gateway-bench
-```
-
-More options (pipx/uv/conda/source): see [Installation](installation.md).
+1. Check built-in defaults with `lgb providers`.
+2. Verify reachability with `lgb warmup bench.yaml`.
+3. Tune a single target with `lgb run`.
+4. Compare multiple targets with `lgb compare`.
+5. Save runs and compare later with `lgb history --compare`.
 
 ---
 
 ## Fast start
 
-### 1) Set an API key
-
 ```bash
-# macOS/Linux
-export OPENAI_API_KEY="..."
+pip install llm-gateway-bench
 
-# Windows PowerShell
-$Env:OPENAI_API_KEY = "..."
-```
+lgb providers
 
-### 2) Run a quick benchmark
-
-```bash
-lgb run --provider openai --model gpt-4.1-mini --requests 20 --concurrency 3 \
+lgb run --provider openai --model gpt-5-mini --requests 20 --concurrency 3 \
   --prompt "Say hello in one sentence."
-```
 
-### 3) Compare multiple providers with a YAML config
-
-```bash
 lgb compare example-bench.yaml --output report.md
 ```
 
 ---
 
-## Common use cases
+## Supported targets
 
-### Provider evaluation
+`llm-gateway-bench` ships with defaults for:
 
-Benchmark 3–5 providers on the *same prompt* with the same concurrency to get a comparable baseline.
+- OpenAI, Anthropic, Google Gemini
+- DeepSeek, Groq, Together, Fireworks, OpenRouter, Mistral, Cohere, Perplexity
+- DashScope, SiliconFlow, Zhipu, Moonshot, Baidu, 01AI, MiniMax
+- Ollama, vLLM, LM Studio
+- Any OpenAI-compatible endpoint via `base_url`
 
-### Gateway regression testing
-
-Run the same YAML config daily (or on every gateway release) and detect:
-
-- TTFT regressions
-- tail latency spikes (p95)
-- throughput drops
-
-### Region / network experiments
-
-Run the same config from multiple environments (e.g. CI + local + cloud VM) to measure network impact.
-
-### Self-hosted endpoints
-
-Use `--base-url` (or YAML `base_url`) to benchmark OpenAI-compatible gateways (vLLM, LM Studio, custom gateways).
+See the full matrix in [Providers](providers.md).
 
 ---
 
 ## Project scope
 
-- This project currently targets **OpenAI-compatible streaming** via `chat.completions.create(stream=True)`.
-- If your provider does not support OpenAI-compatible streaming, you may need a provider-native implementation.
+- Targets OpenAI-compatible streaming chat completion APIs
+- Optimized for benchmarking, not API proxying or model routing
+- Best fit for provider evaluation, gateway validation, and regression tracking
 
 ---
 
-## Next steps
+## Continue
 
-- Read the 5-minute tutorial: [Quickstart](quickstart.md)
-- Configure your benchmark suite: [Configuration](configuration.md)
-- Set up each provider: [Providers](providers.md)
+- Start with [Quickstart](quickstart.md)
+- Build a reproducible suite in [Configuration](configuration.md)
+- Wire it into CI via [Advanced usage](advanced.md)
