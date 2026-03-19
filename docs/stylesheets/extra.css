@@ -1,0 +1,38 @@
+.landing-page .hero-banner {
+  display: block;
+  width: 100%;
+  margin: 0 0 1.5rem;
+  border-radius: 1.25rem;
+  box-shadow: 0 28px 60px rgba(15, 23, 42, 0.16);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: linear-gradient(135deg, #f8fafc 0%, #eef5ff 100%);
+}
+
+.landing-page .md-button {
+  margin: 0.2rem 0.45rem 0.8rem 0;
+  border-radius: 999px;
+}
+
+.landing-page .md-button--primary {
+  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.2);
+}
+
+.landing-page table {
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+}
+
+.landing-page h2 {
+  margin-top: 2.4rem;
+}
+
+.landing-page hr {
+  margin: 2rem 0 1.5rem;
+}
+
+@media screen and (max-width: 76.1875em) {
+  .landing-page .hero-banner {
+    border-radius: 1rem;
+  }
+}
